@@ -32,13 +32,17 @@
 static NSString *ColumnNameVersion = @"version";
 
 
-- (void)initWithPath:(NSString *)path
+- (id)initWithPath:(NSString *)path
             provider:(id<ISDBManagerDelegate>)provider
 {
-  self.path = path;
-  self.state = ISDBManagerStateClosed;
-  // TODO There is a retain cycle here.
-  self.delegate = provider;
+  self = [super init];
+  if (self) {
+    self.path = path;
+    self.state = ISDBManagerStateClosed;
+    // TODO There is a retain cycle here.
+    self.delegate = provider;
+  }
+  return self;
 }
 
 
@@ -71,13 +75,13 @@ static NSString *ColumnNameVersion = @"version";
 {
   assert(self.state != ISDBManagerStateClosed);
   NSString *query = [NSString stringWithFormat:
-                     @"UPDATE %@ set %@ = ? WHERE id = ?",
+                     @"REPLACE INTO %@ (id, %@) VALUES (?, ?)",
                      self.versionTable,
                      ColumnNameVersion];
   BOOL success
     = [self.database executeUpdate:query
-              withArgumentsInArray:@[[NSNumber numberWithInteger:version],
-                                     @0]];
+              withArgumentsInArray:@[@0,
+                                     [NSNumber numberWithInteger:version]]];
   if (!success) {
     @throw [NSException exceptionWithName:@"DatabaseVersionUpdateFailure"
                                    reason:[self.database lastErrorMessage]
@@ -125,7 +129,7 @@ static NSString *ColumnNameVersion = @"version";
 {
   assert(self.state != ISDBManagerStateClosed);
   NSString *table = [NSString stringWithFormat:
-                     @"%@ (id integer, %@ integer)",
+                     @"%@ (id integer primary key, %@ integer)",
                      self.versionTable,
                      ColumnNameVersion];
   [self createTable:table];
@@ -160,6 +164,9 @@ static NSString *ColumnNameVersion = @"version";
           @throw [NSException exceptionWithName:@"DatabaseVersionTooRecent"
                                          reason:@"The database version is higher than that supported by the provider."
                                        userInfo:nil];
+        } else {
+          NSLog(@"Successfully openend database '%@' with version %d",
+                self.path, version);
         }
         self.state = ISDBManagerStateReady;
         
@@ -205,7 +212,6 @@ static NSString *ColumnNameVersion = @"version";
   @try {
     [self.database beginTransaction];
     [self.delegate databaseCreate:self.database];
-    //[self.database executeUpdate:@"CREATE TABLE comments ( id integer primary key autoincrement, comment text not null)"];
     [self setVersion:self.version];
     [self.database commit];
   }
@@ -223,10 +229,10 @@ static NSString *ColumnNameVersion = @"version";
   NSLog(@"Updating database '%@' from version %d to version %d.",
         self.path, oldVersion, newVersion);
   @try {
+    [self.database beginTransaction];
     [self.delegate databaseUpdate:self.database
                        oldVersion:oldVersion
                        newVersion:newVersion];
-    //[self.database executeUpdate:@"DROP TABLE IF EXISTS comments"];
     [self createVersionTable];
     [self setVersion:newVersion];
     [self.database commit];

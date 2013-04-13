@@ -23,9 +23,8 @@ typedef enum {
 
 @protocol ISDBManagerDelegate <NSObject>
 
-- (void)databaseCreate:(FMDatabase *)databse;
-
-// TODO Make the udpate optional.
+- (void)databaseCreate:(FMDatabase *)database;
+// TODO Make this optional.
 - (void)databaseUpdate:(FMDatabase *)database
             oldVersion:(NSUInteger)oldVersion
             newVersion:(NSUInteger)newVersion;
@@ -41,8 +40,8 @@ typedef enum {
                         
 @interface ISDB : NSObject
 
-- (void)initWithPath:(NSString *)path
-            provider:(id<ISDBManagerDelegate>)provider;
+- (id)initWithPath:(NSString *)path
+          provider:(id<ISDBManagerDelegate>)provider;
 - (BOOL)open;
 - (void)close;
 
