@@ -146,6 +146,7 @@ static NSString *ColumnNameVersion = @"version";
 
         [self createVersionTable];
         [self create];
+        self.state = ISDatabaseStateReady;
         
       } else {
         
