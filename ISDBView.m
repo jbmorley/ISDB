@@ -172,16 +172,15 @@ NSInteger ISDBViewIndexUndefined = -1;
 - (void) setClass:(Class)cls
          forField:(NSString *)field
 {
-  ISDBViewType type;
   if (cls == [NSNumber class]) {
-    type = ISDBViewTypeNumber;
+    [self.types setObject:[NSNumber numberWithInt:ISDBViewTypeNumber]
+                   forKey:field];
   } else if (cls == [NSString class]) {
-    type = ISDBViewTypeString;
+    [self.types setObject:[NSNumber numberWithInt:ISDBViewTypeString]
+                   forKey:field];
   } else {
     NSAssert(false, @"Unsupported class");
   }
-  [self.types setObject:[NSNumber numberWithInt:type]
-                   forKey:field];
 }
 
 
@@ -332,6 +331,7 @@ NSInteger ISDBViewIndexUndefined = -1;
                        withObject:[NSNumber numberWithInt:index]];
   } else {
     
+    NSLog(@"Unable to insert row: %@", [self.database lastErrorMessage]);
     if (completionBlock != NULL) {
       completionBlock(nil);
     }

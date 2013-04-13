@@ -8,8 +8,8 @@
 #import <Foundation/Foundation.h>
 
 @protocol ISDBProvider <NSObject>
-- (void)databaseCreate:(FMDatabase *)database;
-- (void)databaseUpdate:(FMDatabase *)database
+- (BOOL)databaseCreate:(FMDatabase *)database;
+- (BOOL)databaseUpdate:(FMDatabase *)database
             oldVersion:(NSUInteger)oldVersion
             newVersion:(NSUInteger)newVersion;
 @optional
