@@ -55,6 +55,8 @@ NSInteger ISDBViewIndexUndefined = -1;
 
 @implementation ISDBView
 
+// TODO Consider whether we should support auto incrmenting to be set here.
+
 // @param identifier Field must be of type auto-incrementing integer.
 // @param orderBy Field must be of type string.
 - (id) initWithDatabase:(FMDatabase *)database
@@ -75,6 +77,7 @@ NSInteger ISDBViewIndexUndefined = -1;
     self.conditions = conditions;
     self.types = [NSMutableDictionary dictionaryWithCapacity:3];
     self.notifier = [ISNotifier new];
+    self.autoIncrementIdentifier = YES;
     
     [self generateQueries];
   }
@@ -250,10 +253,10 @@ NSInteger ISDBViewIndexUndefined = -1;
 }
 
 
-- (NSInteger) indexForIdentifier:(NSInteger)identifier
+- (NSInteger) indexForIdentifier:(id)identifier
 {
   [self update];
-  NSDictionary *entry = [self.entriesByIdentifier objectForKey:[NSNumber numberWithInteger:identifier]];
+  NSDictionary *entry = [self.entriesByIdentifier objectForKey:identifier];
   if (entry != nil) {
     return [self.entries indexOfObject:entry];
   }
@@ -261,10 +264,10 @@ NSInteger ISDBViewIndexUndefined = -1;
 }
 
 
-- (NSDictionary *) entryForIdentifier:(NSInteger)identifier
+- (NSDictionary *) entryForIdentifier:(id)identifier
 {
   [self update];
-  return [self.entriesByIdentifier objectForKey:[NSNumber numberWithInteger:identifier]];
+  return [self.entriesByIdentifier objectForKey:identifier];
 }
 
 
@@ -334,8 +337,17 @@ NSInteger ISDBViewIndexUndefined = -1;
     NSMutableDictionary *cachedEntry
       = [NSMutableDictionary dictionaryWithDictionary:entry];
     
-    NSNumber *identifier = [NSNumber numberWithInt:[self.database lastInsertRowId]];
+    // Determine the identifier so we know where we've been inserted.
+    id identifier;
+    if (self.autoIncrementIdentifier &&
+        [self typeForField:self.identifier
+               defaultType:ISDBViewTypeNumber]) {
+      identifier = [NSNumber numberWithInt:[self.database lastInsertRowId]];
+    } else {
+      identifier = [entry objectForKey:self.identifier];
+    }
     
+    // Cache the entry.
     [cachedEntry setObject:identifier
                     forKey:self.identifier];
     [self.entries addObject:cachedEntry];

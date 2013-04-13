@@ -30,6 +30,7 @@ entryInserted:(NSNumber *)index;
 
 @interface ISDBView : NSObject
 
+@property (nonatomic) BOOL autoIncrementIdentifier;
 @property (nonatomic, readonly) NSUInteger count;
 
 - (id) initWithDatabase:(FMDatabase *)database
@@ -42,10 +43,10 @@ entryInserted:(NSNumber *)index;
 - (void) setClass:(Class)cls
          forField:(NSString *)field;
 
-- (NSInteger) indexForIdentifier:(NSInteger)identifier;
+- (NSInteger) indexForIdentifier:(id)identifier;
 
 - (NSDictionary *) entryForIndex:(NSInteger)index;
-- (NSDictionary *) entryForIdentifier:(NSInteger)identifier;
+- (NSDictionary *) entryForIdentifier:(id)identifier;
 
 - (NSDictionary *) insert:(NSDictionary *)entry;
 - (void) insert:(NSDictionary *)entry
