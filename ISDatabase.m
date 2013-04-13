@@ -1,39 +1,34 @@
 //
-//  ISDB.m
-//  Popcorn
+//  ISDatabase.m
 //
 //  Created by Jason Barrie Morley on 11/04/2013.
 //
 //
 
-#import "ISDB.h"
+#import "ISDatabase.h"
 #import "FMDatabase.h"
 #import "FMDatabaseAdditions.h"
 
 
-@interface ISDB ()
+@interface ISDatabase ()
 
 @property (strong, nonatomic) NSString *path;
 @property (strong, nonatomic) FMDatabase *database;
-@property (strong, nonatomic) id<ISDBManagerDelegate> delegate;
-@property (nonatomic) ISDBManagerState state;
-
+@property (strong, nonatomic) id<ISDBProvider> delegate;
+@property (nonatomic) ISDatabaseState state;
 @property (nonatomic, readonly) NSString *versionTable;
 @property (nonatomic, readonly) NSUInteger version;
 @property (nonatomic, readonly) NSUInteger currentVersion;
 
-// TODO Support multi-threaded environments by cross posting an addition
-// when accessed from a different thread.
-
 @end
 
-@implementation ISDB
+@implementation ISDatabase
 
 static NSString *ColumnNameVersion = @"version";
 
 
 - (id)initWithPath:(NSString *)path
-            provider:(id<ISDBManagerDelegate>)provider
+            provider:(id<ISDBProvider>)provider
 {
   self = [super init];
   if (self) {
