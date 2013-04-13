@@ -42,7 +42,9 @@ typedef enum {
 - (void) generateQueries;
 - (void) update;
 - (void) sort;
-- (ISDBViewType) typeForField:(NSString *)field;
+- (ISDBViewType)typeForField:(NSString *)field;
+- (ISDBViewType)typeForField:(NSString *)field
+                 defaultType:(ISDBViewType)defaultType;
 
 @end
 
@@ -184,13 +186,21 @@ NSInteger ISDBViewIndexUndefined = -1;
 }
 
 
-- (ISDBViewType) typeForField:(NSString *)field
+- (ISDBViewType)typeForField:(NSString *)field
+{
+  return [self typeForField:field
+                defaultType:ISDBViewTypeString];
+}
+
+
+- (ISDBViewType)typeForField:(NSString *)field
+                defaultType:(ISDBViewType)defaultType
 {
   NSNumber *type = [self.types objectForKey:field];
   if (type != nil) {
     return [type integerValue];
   } else {
-    return ISDBViewTypeString;
+    return defaultType;
   }
 }
 
