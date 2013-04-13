@@ -139,7 +139,7 @@ NSInteger ISDBViewIndexUndefined = -1;
 }
 
 
-- (void) update
+- (void)update
 {
   if (self.state != ISDBViewStateValid) {
     self.state = ISDBViewStateValid;
@@ -307,15 +307,12 @@ NSInteger ISDBViewIndexUndefined = -1;
   NSMutableArray *parameters = [NSMutableArray arrayWithCapacity:3];
   NSInteger count = 0;
   for (NSString *field in entry) {
-    // Ignore the identifier.
-    if (![field isEqualToString:self.identifier]) {
-      if (count > 0) {
-        [query appendString:@", "];
-      }
-      [query appendString:field];
-      [parameters addObject:[entry objectForKey:field]];
-      count++;
+    if (count > 0) {
+      [query appendString:@", "];
     }
+    [query appendString:field];
+    [parameters addObject:[entry objectForKey:field]];
+    count++;
   }
   [query appendString:@") values ("];
   
@@ -385,7 +382,7 @@ NSInteger ISDBViewIndexUndefined = -1;
   
   // Steps:
   // 1) Update the database.
-  // 2) If the udpate succeeds, update the local copy.
+  // 2) If the update succeeds, update the local copy.
   // 3) Notify any observers of any location changes.
   
   NSMutableString *query = [NSMutableString stringWithFormat:@"update %@ set ", self.table];
