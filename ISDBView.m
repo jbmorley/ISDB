@@ -42,9 +42,12 @@ typedef enum {
 - (void) generateQueries;
 - (void) update;
 - (void) sort;
-- (ISDBViewType)typeForField:(NSString *)field;
 - (ISDBViewType)typeForField:(NSString *)field
                  defaultType:(ISDBViewType)defaultType;
+- (void)copyField:(NSString *)field
+    fromResultSet:(FMResultSet *)result
+          toEntry:(NSMutableDictionary *)entry
+      defaultType:(ISDBViewType)defaultType;
 
 @end
 
@@ -116,13 +119,32 @@ NSInteger ISDBViewIndexUndefined = -1;
 }
 
 
+- (void)copyField:(NSString *)field
+    fromResultSet:(FMResultSet *)result
+          toEntry:(NSMutableDictionary *)entry
+      defaultType:(ISDBViewType)defaultType
+{
+  ISDBViewType type = [self typeForField:field
+                             defaultType:defaultType];
+  if (type == ISDBViewTypeString) {
+    [entry setObject:[result stringForColumn:field]
+              forKey:field];
+  } else if (type == ISDBViewTypeNumber) {
+    [entry setObject:[NSNumber numberWithInt:[result intForColumn:field]]
+              forKey:field];
+  }
+}
+
+
 - (void) update
 {
   if (self.state != ISDBViewStateValid) {
     self.state = ISDBViewStateValid;
     
-    self.entries = [NSMutableArray arrayWithCapacity:3];
-    self.entriesByIdentifier = [NSMutableDictionary dictionaryWithCapacity:3];
+    self.entries
+      = [NSMutableArray arrayWithCapacity:3];
+    self.entriesByIdentifier
+      = [NSMutableDictionary dictionaryWithCapacity:3];
     FMResultSet *result
       = [self.database executeQuery:self.queryList
                withArgumentsInArray:self.queryListParameters];
@@ -130,29 +152,31 @@ NSInteger ISDBViewIndexUndefined = -1;
       NSMutableDictionary *entry
         = [NSMutableDictionary dictionaryWithCapacity:3];
       
-      NSNumber *identifier = [NSNumber numberWithInt:[result intForColumn:self.identifier]];
-
-      [entry setObject:identifier
-                forKey:self.identifier];
+      // Identifier.
+      [self copyField:self.identifier
+        fromResultSet:result
+              toEntry:entry
+          defaultType:ISDBViewTypeNumber];
+      
+      // Order By.
       if (self.orderBy != nil) {
-        [entry setObject:[result stringForColumn:self.orderBy]
-                  forKey:self.orderBy];
+        [self copyField:self.orderBy
+          fromResultSet:result
+                toEntry:entry
+            defaultType:ISDBViewTypeString];
       }
       
+      // Fields.
       for (NSString *field in self.fields) {
-        ISDBViewType type = [self typeForField:field];
-        if (type == ISDBViewTypeString) {
-          [entry setObject:[result stringForColumn:field]
-                    forKey:field];
-        } else if (type == ISDBViewTypeNumber) {
-          [entry setObject:[NSNumber numberWithInt:[result intForColumn:field]]
-                    forKey:field];
-        }
+        [self copyField:field
+          fromResultSet:result
+                toEntry:entry
+            defaultType:ISDBViewTypeString];
       }
       
       [self.entries addObject:entry];
       [self.entriesByIdentifier setObject:entry
-                                   forKey:identifier];
+                                   forKey:[entry objectForKey:self.identifier]];
     }
     [self sort];
   }
@@ -183,13 +207,6 @@ NSInteger ISDBViewIndexUndefined = -1;
   } else {
     NSAssert(false, @"Unsupported class");
   }
-}
-
-
-- (ISDBViewType)typeForField:(NSString *)field
-{
-  return [self typeForField:field
-                defaultType:ISDBViewTypeString];
 }
 
 
