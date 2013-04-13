@@ -26,6 +26,12 @@
 
 static NSString *ColumnNameVersion = @"version";
 
+// TODO ISDatabase owns the views, stores them by query and tracks
+// interdependence between views (somehow).
+// It will make a point of returning the same view by ID.
+// We should be able to guard against people incorrectly creating
+// ISDBView directly by using categories.
+
 
 - (id)initWithPath:(NSString *)path
             provider:(id<ISDBProvider>)provider
