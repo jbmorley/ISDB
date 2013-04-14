@@ -26,6 +26,12 @@
 }
 
 
+- (NSUInteger)count
+{
+  return self.observers.count;
+}
+
+
 - (void) addObserver:(id)observer
 {
   [self.observers addObject:[[ISNotifierReference alloc] initWithObject:observer]];

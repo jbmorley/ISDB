@@ -10,6 +10,8 @@
 
 @interface ISNotifier : NSObject
 
+@property (nonatomic, readonly) NSUInteger count;
+
 - (void) addObserver:(id)observer;
 - (void) removeObserver:(id)observer;
 
