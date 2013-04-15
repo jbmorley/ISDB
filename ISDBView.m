@@ -130,8 +130,11 @@ NSInteger ISDBViewIndexUndefined = -1;
   ISDBViewType type = [self typeForField:field
                              defaultType:defaultType];
   if (type == ISDBViewTypeString) {
-    [entry setObject:[result stringForColumn:field]
-              forKey:field];
+    NSString *value = [result stringForColumn:field];
+    if (value != nil) {
+      [entry setObject:value
+                forKey:field];
+    }
   } else if (type == ISDBViewTypeNumber) {
     [entry setObject:[NSNumber numberWithInt:[result intForColumn:field]]
               forKey:field];
