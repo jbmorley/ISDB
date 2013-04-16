@@ -74,6 +74,9 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 @implementation ISDBView
 
 // TODO Consider whether we should support auto incrmenting to be set here.
+// Can we infer this from SQLite database?
+
+// TODO Database change feed that all views submit to on changes.
 
 // @param identifier Field must be of type auto-incrementing integer.
 // @param orderBy Field must be of type string.
@@ -154,14 +157,13 @@ static NSString *const kSQLiteTypeInteger = @"integer";
                        @"select typeof(%@) FROM %@",
                        field,
                        self.table];
-    NSLog(@"Query: %@", query);
     FMResultSet *result = [self.database executeQuery:query];
     if ([result next]) {
       NSString *type = [result stringForColumnIndex:0];
-      if (type == kSQLiteTypeText) {
+      if ([type isEqualToString:kSQLiteTypeText]) {
         [self.types setObject:[NSNumber numberWithInt:ISDBViewTypeString]
                        forKey:field];
-      } else if (type == kSQLiteTypeInteger) {
+      } else if ([type isEqualToString:kSQLiteTypeInteger]) {
         [self.types setObject:[NSNumber numberWithInt:ISDBViewTypeNumber]
                        forKey:field];
       }
