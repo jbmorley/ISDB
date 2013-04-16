@@ -274,7 +274,6 @@ static NSString *ColumnNameVersion = @"version";
 - (ISDBView *)table:(NSString *)table
          identifier:(NSString *)identifier
             orderBy:(NSString *)orderBy
-             fields:(NSArray *)fields
          conditions:(NSArray *)conditions
 {
   assert(self.state == ISDatabaseStateReady);
@@ -283,7 +282,6 @@ static NSString *ColumnNameVersion = @"version";
                                    table:table
                               identifier:identifier
                                  orderBy:orderBy
-                                  fields:fields
                               conditions:conditions];
   return view;
 }

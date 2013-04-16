@@ -48,7 +48,6 @@ typedef enum {
 - (ISDBView *)table:(NSString *)table
          identifier:(NSString *)identifier
             orderBy:(NSString *)orderBy
-             fields:(NSArray *)fields
          conditions:(NSArray *)conditions;
 
 @end

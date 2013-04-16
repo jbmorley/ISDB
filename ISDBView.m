@@ -36,7 +36,6 @@ typedef enum {
 @property (strong, nonatomic) NSString *table;
 @property (strong, nonatomic) NSString *identifier;
 @property (strong, nonatomic) NSString *orderBy;
-@property (strong, nonatomic) NSArray *fields;
 @property (strong, nonatomic) NSArray *conditions;
 @property (strong, nonatomic) NSMutableString *queryList;
 @property (strong, nonatomic) NSMutableArray *queryListParameters;
@@ -71,7 +70,6 @@ static NSString *const kSQLiteTypeInteger = @"integer";
                   table:(NSString *)table
              identifier:(NSString *)identifier
                 orderBy:(NSString *)orderBy
-                 fields:(NSArray *)fields
              conditions:(NSArray *)conditions
 {
   self = [super init];
@@ -81,7 +79,6 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.table = table;
     self.identifier = identifier;
     self.orderBy = orderBy;
-    self.fields = fields;
     self.conditions = conditions;
     self.notifier = [ISNotifier new];
     self.autoIncrementIdentifier = YES;
