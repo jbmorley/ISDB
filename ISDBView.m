@@ -29,11 +29,6 @@ typedef enum {
   ISDBViewStateValid
 } ISDBViewState;
 
-typedef enum {
-  ISDBViewTypeString,
-  ISDBViewTypeNumber
-} ISDBViewType;
-
 @interface ISDBView ()
 
 @property (nonatomic) ISDBViewState state;
@@ -43,7 +38,6 @@ typedef enum {
 @property (strong, nonatomic) NSString *orderBy;
 @property (strong, nonatomic) NSArray *fields;
 @property (strong, nonatomic) NSArray *conditions;
-@property (strong, nonatomic) NSMutableDictionary *types;
 @property (strong, nonatomic) NSMutableString *queryList;
 @property (strong, nonatomic) NSMutableArray *queryListParameters;
 @property (strong, nonatomic) NSMutableString *queryCount;
@@ -56,13 +50,6 @@ typedef enum {
 - (void) generateQueries;
 - (void) update;
 - (void) sort;
-- (ISDBViewType)typeForField:(NSString *)field
-                 defaultType:(ISDBViewType)defaultType;
-- (void)copyField:(NSString *)field
-    fromResultSet:(FMResultSet *)result
-          toEntry:(NSMutableDictionary *)entry
-      defaultType:(ISDBViewType)defaultType;
-
 @end
 
 NSInteger ISDBViewIndexUndefined = -1;
@@ -96,12 +83,10 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.orderBy = orderBy;
     self.fields = fields;
     self.conditions = conditions;
-    self.types = [NSMutableDictionary dictionaryWithCapacity:3];
     self.notifier = [ISNotifier new];
     self.autoIncrementIdentifier = YES;
     
     [self generateQueries];
-    [self updateTypes];
   }
   return self;
 }
@@ -144,54 +129,6 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
-- (void)updateTypes
-{
-  // Generate a list of all fields for which we wish to determine the type.
-  NSMutableArray *fields = [NSMutableArray arrayWithArray:self.fields];
-  if (![fields containsObject:self.identifier]) {
-    [fields addObject:self.identifier];
-  }
-  // Iterate over the fields determining the type of each.
-  for (NSString *field in fields) {
-    NSString *query = [NSString stringWithFormat:
-                       @"select typeof(%@) FROM %@",
-                       field,
-                       self.table];
-    FMResultSet *result = [self.database executeQuery:query];
-    if ([result next]) {
-      NSString *type = [result stringForColumnIndex:0];
-      if ([type isEqualToString:kSQLiteTypeText]) {
-        [self.types setObject:[NSNumber numberWithInt:ISDBViewTypeString]
-                       forKey:field];
-      } else if ([type isEqualToString:kSQLiteTypeInteger]) {
-        [self.types setObject:[NSNumber numberWithInt:ISDBViewTypeNumber]
-                       forKey:field];
-      }
-    }
-  }
-}
-
-
-- (void)copyField:(NSString *)field
-    fromResultSet:(FMResultSet *)result
-          toEntry:(NSMutableDictionary *)entry
-      defaultType:(ISDBViewType)defaultType
-{
-  ISDBViewType type = [self typeForField:field
-                             defaultType:defaultType];
-  if (type == ISDBViewTypeString) {
-    NSString *value = [result stringForColumn:field];
-    if (value != nil) {
-      [entry setObject:value
-                forKey:field];
-    }
-  } else if (type == ISDBViewTypeNumber) {
-    [entry setObject:[NSNumber numberWithInt:[result intForColumn:field]]
-              forKey:field];
-  }
-}
-
-
 - (void)update
 {
   if (self.state != ISDBViewStateValid) {
@@ -205,31 +142,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       = [self.database executeQuery:self.queryList
                withArgumentsInArray:self.queryListParameters];
     while ([result next]) {
-      NSMutableDictionary *entry
-        = [NSMutableDictionary dictionaryWithCapacity:3];
-      
-      // Identifier.
-      [self copyField:self.identifier
-        fromResultSet:result
-              toEntry:entry
-          defaultType:ISDBViewTypeNumber];
-      
-      // Order By.
-      if (self.orderBy != nil) {
-        [self copyField:self.orderBy
-          fromResultSet:result
-                toEntry:entry
-            defaultType:ISDBViewTypeString];
-      }
-      
-      // Fields.
-      for (NSString *field in self.fields) {
-        [self copyField:field
-          fromResultSet:result
-                toEntry:entry
-            defaultType:ISDBViewTypeString];
-      }
-      
+      NSMutableDictionary *entry = [NSMutableDictionary dictionaryWithDictionary:[result resultDict]];
       [self.entries addObject:entry];
       [self.entriesByIdentifier setObject:entry
                                    forKey:[entry objectForKey:self.identifier]];
@@ -247,18 +160,6 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       NSDictionary *entryB = b;
       return [[entryA objectForKey:self.orderBy] caseInsensitiveCompare:[entryB objectForKey:self.orderBy]];
     }];
-  }
-}
-
-
-- (ISDBViewType)typeForField:(NSString *)field
-                defaultType:(ISDBViewType)defaultType
-{
-  NSNumber *type = [self.types objectForKey:field];
-  if (type != nil) {
-    return [type integerValue];
-  } else {
-    return defaultType;
   }
 }
 
@@ -375,10 +276,9 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       = [NSMutableDictionary dictionaryWithDictionary:entry];
     
     // Determine the identifier so we know where we've been inserted.
+    // TODO Work out how we correctly determine the identifier.
     id identifier;
-    if (self.autoIncrementIdentifier &&
-        [self typeForField:self.identifier
-               defaultType:ISDBViewTypeNumber]) {
+    if (self.autoIncrementIdentifier) {
       identifier = [NSNumber numberWithInt:[self.database lastInsertRowId]];
     } else {
       identifier = [entry objectForKey:self.identifier];
