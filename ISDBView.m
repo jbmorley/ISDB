@@ -335,6 +335,8 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 {
   [self update];
   
+  // @"SELECT * FROM foo WHERE a = ?"
+  
   // Steps.
   // 1) Insert the entry into the database.
   // 2) If the insertion succeeds, insert the entry into the local copy.
