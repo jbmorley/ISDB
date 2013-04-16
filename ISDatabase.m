@@ -29,7 +29,7 @@
 
 @property (strong, nonatomic) NSString *path;
 @property (strong, nonatomic) FMDatabase *database;
-@property (weak, nonatomic) id<ISDBProvider> delegate;
+@property (weak, nonatomic) id<ISDBProvider> provider;
 @property (nonatomic) ISDatabaseState state;
 @property (nonatomic, readonly) NSString *versionTable;
 @property (nonatomic, readonly) NSUInteger version;
@@ -55,7 +55,7 @@ static NSString *ColumnNameVersion = @"version";
   if (self) {
     self.path = path;
     self.state = ISDatabaseStateClosed;
-    self.delegate = provider;
+    self.provider = provider;
   }
   return self;
 }
@@ -67,8 +67,8 @@ static NSString *ColumnNameVersion = @"version";
 - (NSString *)versionTable
 {
   assert(self.state != ISDatabaseStateClosed);
-  if ([self.delegate respondsToSelector:@selector(versionTable)]) {
-    return [self.delegate databaseVersionTable:self.database];
+  if ([self.provider respondsToSelector:@selector(versionTable)]) {
+    return [self.provider databaseVersionTable:self.database];
   } else {
     return @"version";
   }
@@ -78,8 +78,8 @@ static NSString *ColumnNameVersion = @"version";
 - (NSUInteger)version
 {
   assert(self.state != ISDatabaseStateClosed);
-  if ([self.delegate respondsToSelector:@selector(databaseVersion:)]) {
-    return [self.delegate databaseVersion:self.database];
+  if ([self.provider respondsToSelector:@selector(databaseVersion:)]) {
+    return [self.provider databaseVersion:self.database];
   } else {
     return 1;
   }
@@ -227,7 +227,7 @@ static NSString *ColumnNameVersion = @"version";
   NSLog(@"Creating database '%@'.", self.path);
   @try {
     [self.database beginTransaction];
-    if (![self.delegate databaseCreate:self.database]) {
+    if (![self.provider databaseCreate:self.database]) {
       @throw [NSException exceptionWithName:@"DatabaseCreateFailure"
                                      reason:@"Provider create failed."
                                    userInfo:nil];
@@ -250,7 +250,7 @@ static NSString *ColumnNameVersion = @"version";
         self.path, oldVersion, newVersion);
   @try {
     [self.database beginTransaction];
-    if (![self.delegate databaseUpdate:self.database
+    if (![self.provider databaseUpdate:self.database
                             oldVersion:oldVersion
                             newVersion:newVersion]) {
       @throw [NSException exceptionWithName:@"DatabaseUpdateFailure"
