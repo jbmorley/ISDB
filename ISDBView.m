@@ -67,6 +67,10 @@ typedef enum {
 
 NSInteger ISDBViewIndexUndefined = -1;
 
+static NSString *const kSQLiteTypeText = @"text";
+static NSString *const kSQLiteTypeInteger = @"integer";
+
+
 @implementation ISDBView
 
 // TODO Consider whether we should support auto incrmenting to be set here.
@@ -94,6 +98,7 @@ NSInteger ISDBViewIndexUndefined = -1;
     self.autoIncrementIdentifier = YES;
     
     [self generateQueries];
+    [self updateTypes];
   }
   return self;
 }
@@ -133,6 +138,35 @@ NSInteger ISDBViewIndexUndefined = -1;
     count++;
   }
   
+}
+
+
+- (void)updateTypes
+{
+  // Generate a list of all fields for which we wish to determine the type.
+  NSMutableArray *fields = [NSMutableArray arrayWithArray:self.fields];
+  if (![fields containsObject:self.identifier]) {
+    [fields addObject:self.identifier];
+  }
+  // Iterate over the fields determining the type of each.
+  for (NSString *field in fields) {
+    NSString *query = [NSString stringWithFormat:
+                       @"select typeof(%@) FROM %@",
+                       field,
+                       self.table];
+    NSLog(@"Query: %@", query);
+    FMResultSet *result = [self.database executeQuery:query];
+    if ([result next]) {
+      NSString *type = [result stringForColumnIndex:0];
+      if (type == kSQLiteTypeText) {
+        [self.types setObject:[NSNumber numberWithInt:ISDBViewTypeString]
+                       forKey:field];
+      } else if (type == kSQLiteTypeInteger) {
+        [self.types setObject:[NSNumber numberWithInt:ISDBViewTypeNumber]
+                       forKey:field];
+      }
+    }
+  }
 }
 
 
@@ -211,21 +245,6 @@ NSInteger ISDBViewIndexUndefined = -1;
       NSDictionary *entryB = b;
       return [[entryA objectForKey:self.orderBy] caseInsensitiveCompare:[entryB objectForKey:self.orderBy]];
     }];
-  }
-}
-
-
-- (void) setClass:(Class)cls
-         forField:(NSString *)field
-{
-  if (cls == [NSNumber class]) {
-    [self.types setObject:[NSNumber numberWithInt:ISDBViewTypeNumber]
-                   forKey:field];
-  } else if (cls == [NSString class]) {
-    [self.types setObject:[NSNumber numberWithInt:ISDBViewTypeString]
-                   forKey:field];
-  } else {
-    NSAssert(false, @"Unsupported class");
   }
 }
 
@@ -384,7 +403,9 @@ NSInteger ISDBViewIndexUndefined = -1;
                        withObject:[NSNumber numberWithInt:index]];
   } else {
     
-    NSLog(@"Unable to insert row: %@", [self.database lastErrorMessage]);
+    NSLog(@"Unable to insert entry %@.  Failed with error '%@'",
+          entry,
+          [self.database lastErrorMessage]);
     if (completionBlock != NULL) {
       completionBlock(nil);
     }

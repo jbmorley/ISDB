@@ -54,9 +54,6 @@ entryInserted:(NSNumber *)index;
                  fields:(NSArray *)fields
              conditions:(NSArray *)conditions;
 
-- (void) setClass:(Class)cls
-         forField:(NSString *)field;
-
 - (NSInteger) indexForIdentifier:(id)identifier;
 
 - (NSDictionary *) entryForIndex:(NSInteger)index;
