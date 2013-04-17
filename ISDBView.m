@@ -85,18 +85,44 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.autoIncrementIdentifier = YES;
 
     // TODO Write some unit tests for this!
+    // TODO Order By
     
-    [self parseQuery:@"select * from the_table"];
-    [self parseQuery:@"select * from random"];
-    [self parseQuery:@"select a from table_two"];
-    [self parseQuery:@"select b, c from table_three"];
-    [self parseQuery:@"select b, c, d from a"];
-    [self parseQuery:@"select a from sets join cards on sets.id = cards.set_id"];
-    [self parseQuery:@"select a.field from sets join cards on sets.id = cards.set_id"];
-    [self parseQuery:@"SELECT * FROM items WHERE a = b ORDER BY id"];
-    [self parseQuery:@"SELECT (a, b, c) FROM items WHERE a = b ORDER BY id"];
-    [self parseQuery:@"SELECT (a, b, c) FROM items ORDER BY id"];
-    [self parseQuery:@"SELECT * FROM sets join cards on sets.id = cards.set_id WHERE a = b ORDER BY id"];
+    [self testQuery:@"select * from the_table"
+             tables:@[@"the_table"]
+             fields:@[]];
+    [self testQuery:@"select * from random"
+             tables:@[@"random"]
+             fields:@[]];
+    [self testQuery:@"select a from table_two"
+             tables:@[@"table_two"]
+             fields:@[@"a"]];
+    [self testQuery:@"select b, c from table_three"
+             tables:@[@"table_three"]
+             fields:@[@"b", @"c"]];
+    [self testQuery:@"select b, c, d from a"
+             tables:@[@"a"]
+             fields:@[@"b", @"c", @"d"]];
+    [self testQuery:@"select a, c, d from one join two"
+             tables:@[@"one", @"two"]
+             fields:@[@"a", @"c", @"d"]];
+    [self testQuery:@"select a from sets join cards on sets.id = cards.set_id"
+             tables:@[@"sets", @"cards"]
+             fields:@[@"a"]];
+    [self testQuery:@"select a.field from sets join cards on sets.id = cards.set_id"
+             tables:@[@"sets", @"cards"]
+             fields:@[@"a.field"]];
+    [self testQuery:@"SELECT * FROM items WHERE a = b ORDER BY id"
+             tables:@[@"sets", @"cards"]
+             fields:@[@"a.field"]];
+    [self testQuery:@"SELECT (a, b, c) FROM items WHERE a = b ORDER BY id"
+             tables:@[@"items", @"cards"]
+             fields:@[@"a", @"b", @"c"]];
+    [self testQuery:@"SELECT (a, b, c) FROM items ORDER BY id"
+             tables:@[@"items"]
+             fields:@[@"a", @"b", @"c"]];
+    [self testQuery:@"SELECT * FROM sets join cards on sets.id = cards.set_id WHERE a = b ORDER BY id"
+             tables:@[@"sets", @"cards"]
+             fields:@[]];
     
     
     [self generateQueries];
@@ -104,10 +130,20 @@ static NSString *const kSQLiteTypeInteger = @"integer";
   return self;
 }
 
-- (void)parseQuery:(NSString *)query
+- (void)testQuery:(NSString *)query
+           tables:(NSArray *)tables
+           fields:(NSArray *)fields
 {
   ISDBParser *parser = [[ISDBParser alloc] initWithQuery:query];
-  NSLog(@"%@", parser);
+  
+  NSSet *tablesSet = [NSSet setWithArray:tables];
+  NSSet *fieldsSet = [NSSet setWithArray:fields];
+  
+  BOOL equal = YES;
+  equal &= [tablesSet isEqualToSet:parser.tables];
+  equal &= [fieldsSet isEqualToSet:parser.fields];
+  
+  NSLog(@"%@ - %@", query, equal ? @"PASS" : @"FAIL");
 }
 
 - (void) generateQueries

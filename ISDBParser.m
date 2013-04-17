@@ -12,8 +12,6 @@
 @interface ISDBParser ()
 
 @property (strong, nonatomic) NSString *query;
-@property (strong, nonatomic) NSMutableArray *tables;
-@property (strong, nonatomic) NSMutableArray *fields;
 
 @end
 
@@ -25,8 +23,8 @@
   if (self) {
     self.query = query;
     
-    self.tables = [NSMutableArray arrayWithCapacity:3];
-    self.fields = [NSMutableArray arrayWithCapacity:3];
+    self.tables = [NSMutableSet setWithCapacity:3];
+    self.fields = [NSMutableSet setWithCapacity:3];
     
     [self tokenize:self.query];
     
@@ -67,8 +65,8 @@
 {
   return [NSString stringWithFormat:@"Query: '%@', Tables: [%@], Fields: [%@]",
           self.query,
-          [self.tables componentsJoinedByString:@","],
-          [self.fields componentsJoinedByString:@","]];
+          [[self.tables allObjects] componentsJoinedByString:@","],
+          [[self.fields allObjects] componentsJoinedByString:@","]];
 }
 
 
@@ -78,21 +76,20 @@
 - (void)parser:(PKParser *)parser
 didMatchTable_name:(PKAssembly *)a
 {
-  NSLog(@"Table Name: %@", [a.stack lastObject]);
+  [self.tables addObject:[[a.stack lastObject] stringValue]];
 }
 
 
 - (void)parser:(PKParser *)parser
 didMatchResult_column:(PKAssembly *)a
 {
-  [self.fields addObject:[a.stack lastObject]];
+  [self.fields addObject:[[a.stack lastObject] stringValue]];
 }
 
 
 - (void)parser:(PKParser *)parser
 didMatchTable_description:(PKAssembly *)a
 {
-  [self.tables addObject:[a.stack lastObject]];
 }
 
 

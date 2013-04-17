@@ -5,11 +5,15 @@ fields = '*' | result_column (',' result_column)*;
 result_column = name;
 
 from_expression = 'from' table_description;
-table_description = name; // TODO Support joins.
+table_description = table_name ( join_op single_source join_constraint? ); // TODO Support joins.
+join_op = 'join';
+single_source = table_name;
+join_constraint = 'on'; // TODO
 
 where_expression = name; // TODO
 group_expression = name; // TODO
 
+table_name = Word | QuotedString;
 name = Word | QuotedString;
 
 

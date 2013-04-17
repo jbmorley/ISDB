@@ -10,6 +10,9 @@
 
 @interface ISDBParser : NSObject
 
+@property (strong, nonatomic) NSMutableSet *tables;
+@property (strong, nonatomic) NSMutableSet *fields;
+
 - (id)initWithQuery:(NSString *)query;
 - (void)tokenize:(NSString *)query;
 
