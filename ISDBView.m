@@ -22,6 +22,7 @@
 
 #import "ISDBView.h"
 #import "ISNotifier.h"
+#import "ISDBParser.h"
 
 typedef enum {
   ISDBViewStateInvalid,
@@ -82,10 +83,31 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.conditions = conditions;
     self.notifier = [ISNotifier new];
     self.autoIncrementIdentifier = YES;
+
+    // TODO Write some unit tests for this!
+    
+    [self parseQuery:@"select * from the_table"];
+    [self parseQuery:@"select * from random"];
+    [self parseQuery:@"select a from table_two"];
+    [self parseQuery:@"select b, c from table_three"];
+    [self parseQuery:@"select b, c, d from a"];
+    [self parseQuery:@"select a from sets join cards on sets.id = cards.set_id"];
+    [self parseQuery:@"select a.field from sets join cards on sets.id = cards.set_id"];
+    [self parseQuery:@"SELECT * FROM items WHERE a = b ORDER BY id"];
+    [self parseQuery:@"SELECT (a, b, c) FROM items WHERE a = b ORDER BY id"];
+    [self parseQuery:@"SELECT (a, b, c) FROM items ORDER BY id"];
+    [self parseQuery:@"SELECT * FROM sets join cards on sets.id = cards.set_id WHERE a = b ORDER BY id"];
+    
     
     [self generateQueries];
   }
   return self;
+}
+
+- (void)parseQuery:(NSString *)query
+{
+  ISDBParser *parser = [[ISDBParser alloc] initWithQuery:query];
+  NSLog(@"%@", parser);
 }
 
 - (void) generateQueries
