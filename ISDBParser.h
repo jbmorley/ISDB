@@ -11,6 +11,6 @@
 @interface ISDBParser : NSObject
 
 - (id)initWithQuery:(NSString *)query;
-- (NSArray *)tokenize:(NSString *)query;
+- (void)tokenize:(NSString *)query;
 
 @end

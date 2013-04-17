@@ -1,5 +1,20 @@
-@start = select_stmt;
+@start = statement+;     // outermost production
+statement = select_statement;
+select_statement = 'select' fields from_expression where_expression? group_expression?;
+fields = '*' | result_column (',' result_column)*;
+result_column = name;
 
+from_expression = 'from' table_description;
+table_description = name; // TODO Support joins.
+
+where_expression = name; // TODO
+group_expression = name; // TODO
+
+name = Word | QuotedString;
+
+
+/*
+@start = select_stmt;
 select_stmt = select_core ( compound_operator select_core )* order_term?;
 order_term = 'order' 'by' ordering_term ( ',' ordering_term )*;
 select_core = ( select_distinct | select_all ) result_column ( ',' result_column )* from_term? where_term? group_term?;
@@ -25,23 +40,12 @@ compound_operator = 'union' 'all'? | 'intersect' | 'except';
 expr = literal_value | literal_value operator literal_value;
 literal_value = Word | QuotedString;
 operator = '||' | '*' | '/' | '%' | '+' | '-' | '<<' | '>>' | '&' | '|' | '<' | '>' | '>=' | '=' | '==' | '!=' | '<>' | 'is' | 'is' 'not' | 'in' | 'like' | 'glob' | 'match' | 'regexp' | 'and' | 'or';
+*/
 
 
 /*
-@start = statement+;     // outermost production
-statement = select_statement;
-select_statement = 'select' fields from_expression where_expression? group_expression?;
-fields = '*' | result_column (',' result_column)*;
-result_column = name;
 
-from_expression = 'from' table_description;
-table_description = name; // TODO Support joins.
 
-where_expression = name; // TODO
-group_expression = name; // TODO
-
-name = Word | QuotedString;
-*/
 
 
 /*

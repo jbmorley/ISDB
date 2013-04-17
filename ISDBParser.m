@@ -28,8 +28,7 @@
     self.tables = [NSMutableArray arrayWithCapacity:3];
     self.fields = [NSMutableArray arrayWithCapacity:3];
     
-    NSArray *tokens = [self tokenize:self.query];
-    NSLog(@"%@", tokens);
+    [self tokenize:self.query];
     
     // TODO What does this need to determine?
     // Tables a query depends on (e.g. in the case of a join, etc).
@@ -45,10 +44,8 @@
   return self;
 }
 
-- (NSArray *)tokenize:(NSString *)query
+- (void)tokenize:(NSString *)query
 {
-  NSMutableArray *tokens = [[NSMutableArray alloc] initWithCapacity:1];
-  
   NSString *filePath = [[NSBundle mainBundle] pathForResource:@"sqlite"
                                                        ofType:@"grammar"];
   NSString *g = [NSString stringWithContentsOfFile:filePath
@@ -60,19 +57,18 @@
                                               assembler:self
                                                   error:nil];
   
+  NSError *error = nil;
   [parser parse:query
-          error:nil];
-  
-  return tokens;
+          error:&error];
 }
 
 
 - (NSString *)description
 {
-  return [NSString stringWithFormat:@"Query: %@, Tables: %@, Fields: %@",
+  return [NSString stringWithFormat:@"Query: '%@', Tables: [%@], Fields: [%@]",
           self.query,
-          self.tables,
-          self.fields];
+          [self.tables componentsJoinedByString:@","],
+          [self.fields componentsJoinedByString:@","]];
 }
 
 
@@ -80,9 +76,15 @@
 
 
 - (void)parser:(PKParser *)parser
+didMatchTable_name:(PKAssembly *)a
+{
+  NSLog(@"Table Name: %@", [a.stack lastObject]);
+}
+
+
+- (void)parser:(PKParser *)parser
 didMatchResult_column:(PKAssembly *)a
 {
-  // NSLog(@"Result Column: %@", [a.stack lastObject]);
   [self.fields addObject:[a.stack lastObject]];
 }
 
@@ -90,7 +92,7 @@ didMatchResult_column:(PKAssembly *)a
 - (void)parser:(PKParser *)parser
 didMatchTable_description:(PKAssembly *)a
 {
-  NSLog(@"Table Description: %@", [a.stack lastObject]);
+  [self.tables addObject:[a.stack lastObject]];
 }
 
 
