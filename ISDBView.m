@@ -83,56 +83,86 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.conditions = conditions;
     self.notifier = [ISNotifier new];
     self.autoIncrementIdentifier = YES;
-
-    // TODO Write some unit tests for this!
-    // TODO Order By
     
-    [self testQuery:@"select * from the_table"
-             tables:@[@"the_table"]
-             fields:@[]];
-    [self testQuery:@"select * from random"
-             tables:@[@"random"]
-             fields:@[]];
-    [self testQuery:@"select a from table_two"
-             tables:@[@"table_two"]
-             fields:@[@"a"]];
-    [self testQuery:@"select b, c from table_three"
-             tables:@[@"table_three"]
-             fields:@[@"b", @"c"]];
-    [self testQuery:@"select b, c, d from a"
-             tables:@[@"a"]
-             fields:@[@"b", @"c", @"d"]];
-    [self testQuery:@"select a, c, d from one join two"
-             tables:@[@"one", @"two"]
-             fields:@[@"a", @"c", @"d"]];
-    [self testQuery:@"select a from sets join cards on sets.id = cards.set_id"
-             tables:@[@"sets", @"cards"]
-             fields:@[@"a"]];
-    [self testQuery:@"select a.field from sets join cards on sets.id = cards.set_id"
-             tables:@[@"sets", @"cards"]
-             fields:@[@"a.field"]];
-    [self testQuery:@"SELECT * FROM items WHERE a = b ORDER BY id"
-             tables:@[@"sets", @"cards"]
-             fields:@[@"a.field"]];
-    [self testQuery:@"SELECT (a, b, c) FROM items WHERE a = b ORDER BY id"
-             tables:@[@"items", @"cards"]
-             fields:@[@"a", @"b", @"c"]];
-    [self testQuery:@"SELECT (a, b, c) FROM items ORDER BY id"
-             tables:@[@"items"]
-             fields:@[@"a", @"b", @"c"]];
-    [self testQuery:@"SELECT * FROM sets join cards on sets.id = cards.set_id WHERE a = b ORDER BY id"
-             tables:@[@"sets", @"cards"]
-             fields:@[]];
-    
-    
+//    [self runTests];
     [self generateQueries];
   }
   return self;
 }
 
+
+- (void)runTests
+{
+  // TODO Write some unit tests for this!
+  // TODO Order By = ARRAY!!!
+  // Ascending or descending?
+  // Group by. If this is set, then we probably refuse to support editing.
+  // We should also refuse to support editing if distinct or similar is set.
+  // Refuse to support editing if more than one order-by is set?
+  // Test multiple order-by clauses.
+  
+  [self testQuery:@"select * from the_table"
+           tables:@[@"the_table"]
+           fields:@[]
+            order:@""];
+  [self testQuery:@"select * from random"
+           tables:@[@"random"]
+           fields:@[]
+            order:@""];
+  [self testQuery:@"select a from table_two"
+           tables:@[@"table_two"]
+           fields:@[@"a"]
+            order:@""];
+  [self testQuery:@"select b, c from table_three"
+           tables:@[@"table_three"]
+           fields:@[@"b", @"c"]
+            order:@""];
+  [self testQuery:@"select b, c, d from a"
+           tables:@[@"a"]
+           fields:@[@"b", @"c", @"d"]
+            order:@""];
+  [self testQuery:@"select a, c, d from one join two"
+           tables:@[@"one", @"two"]
+           fields:@[@"a", @"c", @"d"]
+            order:@""];
+  [self testQuery:@"select a from sets join cards on sets.id = cards.set_id"
+           tables:@[@"sets", @"cards"]
+           fields:@[@"a"]
+            order:@""];
+  [self testQuery:@"select a.field from sets join cards on sets.id = cards.set_id"
+           tables:@[@"sets", @"cards"]
+           fields:@[@"a.field"]
+            order:@""];
+  [self testQuery:@"SELECT * FROM items"
+           tables:@[@"items"]
+           fields:@[]
+            order:@""];
+  [self testQuery:@"SELECT * FROM items ORDER BY id"
+           tables:@[@"items"]
+           fields:@[]
+            order:@"id"];
+  [self testQuery:@"SELECT * FROM items WHERE d > 23 ORDER BY id"
+           tables:@[@"items"]
+           fields:@[]
+            order:@"id"];
+  [self testQuery:@"SELECT (a, b, c) FROM items WHERE a = b ORDER BY id"
+           tables:@[@"items", @"cards"]
+           fields:@[@"a", @"b", @"c"]
+            order:@""];
+  [self testQuery:@"SELECT (a, b, c) FROM items ORDER BY id"
+           tables:@[@"items"]
+           fields:@[@"a", @"b", @"c"]
+            order:@""];
+  [self testQuery:@"SELECT * FROM sets join cards on sets.id = cards.set_id WHERE a = b ORDER BY id"
+           tables:@[@"sets", @"cards"]
+           fields:@[]
+            order:@""];
+}
+
 - (void)testQuery:(NSString *)query
            tables:(NSArray *)tables
            fields:(NSArray *)fields
+            order:(NSString *)order
 {
   ISDBParser *parser = [[ISDBParser alloc] initWithQuery:query];
   
@@ -142,8 +172,12 @@ static NSString *const kSQLiteTypeInteger = @"integer";
   BOOL equal = YES;
   equal &= [tablesSet isEqualToSet:parser.tables];
   equal &= [fieldsSet isEqualToSet:parser.fields];
+  equal &= [order isEqualToString:parser.order];
   
   NSLog(@"%@ - %@", query, equal ? @"PASS" : @"FAIL");
+  if (!equal) {
+    NSLog(@"%@", parser);
+  }
 }
 
 - (void) generateQueries
@@ -286,181 +320,228 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
+
+
+- (void)executeSynchronouslyOnMainThread:(ISDBTask)task
+{
+  if ([[NSThread currentThread] isMainThread]) {
+    task();
+  } else {
+    dispatch_sync(dispatch_get_main_queue(), task);
+  }
+}
+
+
 - (void) insert:(NSDictionary *)entry
      completion:(void (^)(NSDictionary *))completionBlock
 {
-  [self update];
-  
-  // @"SELECT * FROM foo WHERE a = ?"
-  
-  // Steps.
-  // 1) Insert the entry into the database.
-  // 2) If the insertion succeeds, insert the entry into the local copy.
-  // 3) Notify any observers of the insertion.
-  
-  NSMutableString *query = [NSMutableString stringWithFormat:@"insert into %@ (", self.table];
-  
-  NSMutableArray *parameters = [NSMutableArray arrayWithCapacity:3];
-  NSInteger count = 0;
-  for (NSString *field in entry) {
-    if (count > 0) {
-      [query appendString:@", "];
-    }
-    [query appendString:field];
-    [parameters addObject:[entry objectForKey:field]];
-    count++;
-  }
-  [query appendString:@") values ("];
-  
-  count = 0;
-  for (NSString *parameter in parameters) {
-    if (count > 0) {
-      [query appendString:@", "];
-    }
-    [query appendString:@"?"];
-    count++;
-  }
-  [query appendString:@")"];
-  
-  BOOL success = [self.database executeUpdate:query
-                         withArgumentsInArray:parameters];
-  
-  if (success) {
-    // Update the local copy.
-    NSMutableDictionary *cachedEntry
-      = [NSMutableDictionary dictionaryWithDictionary:entry];
-    
-    // Determine the identifier so we know where we've been inserted.
-    // TODO Work out how we correctly determine the identifier.
-    id identifier;
-    if (self.autoIncrementIdentifier) {
-      identifier = [NSNumber numberWithInt:[self.database lastInsertRowId]];
-    } else {
-      identifier = [entry objectForKey:self.identifier];
-    }
-    
-    // Cache the entry.
-    [cachedEntry setObject:identifier
-                    forKey:self.identifier];
-    [self.entries addObject:cachedEntry];
-    [self.entriesByIdentifier setObject:cachedEntry
-                                 forKey:identifier];
-    
-    // Call the completion block once we've correctly inserted the new
-    // dictionary to allow external binding APIs to ensure they're
-    // up-to-date.
-    if (completionBlock != NULL) {
-      completionBlock(cachedEntry);
-    }
-    
-    // Determine the new location.
-    [self sort];
-    NSInteger index = [self.entries indexOfObject:cachedEntry];
+  [self executeSynchronouslyOnMainThread:^{
 
-    [self.notifier notify:@selector(view:entryInserted:)
-                       withObject:self
-                       withObject:[NSNumber numberWithInt:index]];
-  } else {
+    [self update];
     
-    NSLog(@"Unable to insert entry %@.  Failed with error '%@'",
-          entry,
-          [self.database lastErrorMessage]);
-    if (completionBlock != NULL) {
-      completionBlock(nil);
+    // @"SELECT * FROM foo WHERE a = ?"
+    
+    // Steps.
+    // 1) Insert the entry into the database.
+    // 2) If the insertion succeeds, insert the entry into the local copy.
+    // 3) Notify any observers of the insertion.
+    
+    NSMutableString *query = [NSMutableString stringWithFormat:@"insert into %@ (", self.table];
+    
+    NSMutableArray *parameters = [NSMutableArray arrayWithCapacity:3];
+    NSInteger count = 0;
+    for (NSString *field in entry) {
+      if (count > 0) {
+        [query appendString:@", "];
+      }
+      [query appendString:field];
+      [parameters addObject:[entry objectForKey:field]];
+      count++;
+    }
+    [query appendString:@") values ("];
+    
+    count = 0;
+    for (NSString *parameter in parameters) {
+      if (count > 0) {
+        [query appendString:@", "];
+      }
+      [query appendString:@"?"];
+      count++;
+    }
+    [query appendString:@")"];
+    
+    BOOL success = [self.database executeUpdate:query
+                           withArgumentsInArray:parameters];
+    
+    if (success) {
+      // Update the local copy.
+      NSMutableDictionary *cachedEntry
+      = [NSMutableDictionary dictionaryWithDictionary:entry];
+      
+      // Determine the identifier so we know where we've been inserted.
+      // TODO Work out how we correctly determine the identifier.
+      id identifier;
+      if (self.autoIncrementIdentifier) {
+        identifier = [NSNumber numberWithInt:[self.database lastInsertRowId]];
+      } else {
+        identifier = [entry objectForKey:self.identifier];
+      }
+      
+      // Cache the entry.
+      [cachedEntry setObject:identifier
+                      forKey:self.identifier];
+      [self.entries addObject:cachedEntry];
+      [self.entriesByIdentifier setObject:cachedEntry
+                                   forKey:identifier];
+      
+      // Call the completion block once we've correctly inserted the new
+      // dictionary to allow external binding APIs to ensure they're
+      // up-to-date.
+      if (completionBlock != NULL) {
+        completionBlock(cachedEntry);
+      }
+      
+      // Determine the new location.
+      [self sort];
+      NSInteger index = [self.entries indexOfObject:cachedEntry];
+      
+      [self.notifier notify:@selector(view:entryInserted:)
+                 withObject:self
+                 withObject:[NSNumber numberWithInt:index]];
+    } else {
+      
+      NSLog(@"Unable to insert entry %@.  Failed with error '%@'",
+            entry,
+            [self.database lastErrorMessage]);
+      if (completionBlock != NULL) {
+        completionBlock(nil);
+      }
+      
     }
     
-  }
+  }];
 }
 
 
 - (BOOL) update:(NSDictionary *)entry
 {
-  [self update];
-  
-  // Steps:
-  // 1) Update the database.
-  // 2) If the update succeeds, update the local copy.
-  // 3) Notify any observers of any location changes.
-  
-  NSMutableString *query = [NSMutableString stringWithFormat:@"update %@ set ", self.table];
-  
-  NSMutableArray *parameters = [NSMutableArray arrayWithCapacity:3];
-  NSInteger count = 0;
-  for (NSString *field in entry) {
-    // Ignore the identifier.
-    if (![field isEqualToString:self.identifier]) {
-      if (count > 0) {
-        [query appendString:@", "];
-      }
-      [query appendFormat:@"%@ = ?", field];
-      [parameters addObject:[entry objectForKey:field]];
-      count++;
-    }
-  }
-  [query appendFormat:@" where %@ = ?", self.identifier];
-  [parameters addObject:[entry objectForKey:self.identifier]];
-  
-  BOOL success = [self.database executeUpdate:query
-                         withArgumentsInArray:parameters];
-  
-  if (success) {
-    // Update the local copy.
-    NSMutableDictionary *cachedEntry = [self.entriesByIdentifier objectForKey:[entry objectForKey:self.identifier]];
+  __block BOOL result = NO;
+  [self update:entry
+    completion:^(BOOL success) {
+      result = success;
+    }];
+  return result;
+}
+
+
+- (void) update:(NSDictionary *)entry
+     completion:(void (^)(BOOL))completionBlock
+{
+  [self executeSynchronouslyOnMainThread:^{
     
+    [self update];
+    
+    // Steps:
+    // 1) Update the database.
+    // 2) If the update succeeds, update the local copy.
+    // 3) Notify any observers of any location changes.
+    
+    NSMutableString *query = [NSMutableString stringWithFormat:@"update %@ set ", self.table];
+    
+    NSMutableArray *parameters = [NSMutableArray arrayWithCapacity:3];
+    NSInteger count = 0;
     for (NSString *field in entry) {
-      [cachedEntry setObject:[entry objectForKey:field]
-                      forKey:field];
+      // Ignore the identifier.
+      if (![field isEqualToString:self.identifier]) {
+        if (count > 0) {
+          [query appendString:@", "];
+        }
+        [query appendFormat:@"%@ = ?", field];
+        [parameters addObject:[entry objectForKey:field]];
+        count++;
+      }
+    }
+    [query appendFormat:@" where %@ = ?", self.identifier];
+    [parameters addObject:[entry objectForKey:self.identifier]];
+    
+    BOOL success = [self.database executeUpdate:query
+                           withArgumentsInArray:parameters];
+    
+    if (success) {
+      // Update the local copy.
+      NSMutableDictionary *cachedEntry = [self.entriesByIdentifier objectForKey:[entry objectForKey:self.identifier]];
+      
+      for (NSString *field in entry) {
+        [cachedEntry setObject:[entry objectForKey:field]
+                        forKey:field];
+      }
+      
+      // Determine the new location.
+      NSInteger oldIndex = [self.entries indexOfObject:cachedEntry];
+      [self sort];
+      NSInteger newIndex = [self.entries indexOfObject:cachedEntry];
+      
+      if (oldIndex != newIndex) {
+        [self.notifier notify:@selector(view:entryMoved:)
+                           withObject:self
+                           withObject:@[[NSNumber numberWithInt:oldIndex],
+                                        [NSNumber numberWithInt:newIndex]]];
+      } else {
+        [self.notifier notify:@selector(view:entryUpdated:)
+                           withObject:self
+                           withObject:[NSNumber numberWithInt:oldIndex]];
+      }
+      
     }
     
-    // Determine the new location.
-    NSInteger oldIndex = [self.entries indexOfObject:cachedEntry];
-    [self sort];
-    NSInteger newIndex = [self.entries indexOfObject:cachedEntry];
+    completionBlock(success);
     
-    if (oldIndex != newIndex) {
-      [self.notifier notify:@selector(view:entryMoved:)
-                         withObject:self
-                         withObject:@[[NSNumber numberWithInt:oldIndex],
-                                      [NSNumber numberWithInt:newIndex]]];
-    } else {
-      [self.notifier notify:@selector(view:entryUpdated:)
-                         withObject:self
-                         withObject:[NSNumber numberWithInt:oldIndex]];
-    }
-    
-  }
-  
-  return success;
+  }];
 }
 
 
 - (BOOL) delete:(NSDictionary *)entry
 {
-  [self update];
-  
-  // Steps:
-  // 1) Update the database.
-  // 2) Rmeove the entry from the local copy.
-  // 3) Notify any observers of location changes.
-  
-  NSMutableString *query = [NSMutableString stringWithFormat:@"delete from %@ where %@ = ?", self.table, self.identifier];
-  
-  NSNumber *identifier = [entry objectForKey:self.identifier];
-  
-  BOOL success = [self.database executeUpdate:query
-                         withArgumentsInArray:@[identifier]];
-  if (success) {
-    NSMutableDictionary *cachedEntry = [self.entriesByIdentifier objectForKey:identifier];
-    NSInteger index = [self.entries indexOfObject:cachedEntry];
+  __block BOOL result = NO;
+  [self delete:entry
+    completion:^(BOOL success) {
+      result = success;
+    }];
+  return result;
+}
+
+
+- (void) delete:(NSDictionary *)entry
+     completion:(void (^)(BOOL))completionBlock
+{
+  [self executeSynchronouslyOnMainThread:^{
+    [self update];
     
-    [self.entries removeObject:cachedEntry];
-    [self.entriesByIdentifier removeObjectForKey:identifier];
+    // Steps:
+    // 1) Update the database.
+    // 2) Rmeove the entry from the local copy.
+    // 3) Notify any observers of location changes.
     
-    [self.notifier notify:@selector(view:entryDeleted:)
-                       withObject:self
-                       withObject:[NSNumber numberWithInt:index]];
-  }
-  return success;
+    NSMutableString *query = [NSMutableString stringWithFormat:@"delete from %@ where %@ = ?", self.table, self.identifier];
+    
+    NSNumber *identifier = [entry objectForKey:self.identifier];
+    
+    BOOL success = [self.database executeUpdate:query
+                           withArgumentsInArray:@[identifier]];
+    if (success) {
+      NSMutableDictionary *cachedEntry = [self.entriesByIdentifier objectForKey:identifier];
+      NSInteger index = [self.entries indexOfObject:cachedEntry];
+      
+      [self.entries removeObject:cachedEntry];
+      [self.entriesByIdentifier removeObjectForKey:identifier];
+      
+      [self.notifier notify:@selector(view:entryDeleted:)
+                         withObject:self
+                         withObject:[NSNumber numberWithInt:index]];
+    }
+    
+    completionBlock(success);
+  }];
 }
 
 

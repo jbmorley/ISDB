@@ -10,8 +10,10 @@
 
 @interface ISDBParser : NSObject
 
+// TODO Make these read only
 @property (strong, nonatomic) NSMutableSet *tables;
 @property (strong, nonatomic) NSMutableSet *fields;
+@property (strong, nonatomic) NSString *order;
 
 - (id)initWithQuery:(NSString *)query;
 - (void)tokenize:(NSString *)query;

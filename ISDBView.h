@@ -24,6 +24,10 @@
 #import "FMDatabase.h"
 #import "ISDBCondition.h"
 
+// TODO Assert that we're running on the main thread.
+
+typedef void(^ISDBTask)();
+
 extern NSInteger ISDBViewIndexUndefined;
 
 @class ISDBView;
@@ -59,10 +63,15 @@ entryInserted:(NSNumber *)index;
 - (NSDictionary *) entryForIdentifier:(id)identifier;
 
 - (NSDictionary *) insert:(NSDictionary *)entry;
-- (void) insert:(NSDictionary *)entry
-     completion:(void (^)(NSDictionary *))completionBlock;
 - (BOOL) update:(NSDictionary *)entry;
 - (BOOL) delete:(NSDictionary *)entry;
+
+- (void) insert:(NSDictionary *)entry
+     completion:(void (^)(NSDictionary *))completionBlock;
+- (void) update:(NSDictionary *)entry
+     completion:(void (^)(BOOL))completionBlock;
+- (void) delete:(NSDictionary *)entry
+     completion:(void (^)(BOOL))completionBlock;
 
 - (void) addObserver:(id<ISDBViewObserver>)observer;
 - (void) removeObserver:(id<ISDBViewObserver>)observer;

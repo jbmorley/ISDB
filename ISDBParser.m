@@ -25,6 +25,7 @@
     
     self.tables = [NSMutableSet setWithCapacity:3];
     self.fields = [NSMutableSet setWithCapacity:3];
+    self.order = @"";
     
     [self tokenize:self.query];
     
@@ -35,7 +36,6 @@
     // which column is used for any order by
     // (if we do not specify an order by, what do we do?
     // whether the table is a compound table or not...
-    
     
     
   }
@@ -56,17 +56,19 @@
                                                   error:nil];
   
   NSError *error = nil;
-  [parser parse:query
-          error:&error];
+  id result = [parser parse:query
+                      error:&error];
+  NSLog(@"Result: %@", result);
 }
 
 
 - (NSString *)description
 {
-  return [NSString stringWithFormat:@"Query: '%@', Tables: [%@], Fields: [%@]",
+  return [NSString stringWithFormat:@"Query: '%@', Tables: [%@], Fields: [%@], Order: %@",
           self.query,
-          [[self.tables allObjects] componentsJoinedByString:@","],
-          [[self.fields allObjects] componentsJoinedByString:@","]];
+          [[self.tables allObjects] componentsJoinedByString:@", "],
+          [[self.fields allObjects] componentsJoinedByString:@", "],
+          self.order];
 }
 
 
@@ -83,14 +85,26 @@ didMatchTable_name:(PKAssembly *)a
 - (void)parser:(PKParser *)parser
 didMatchResult_column:(PKAssembly *)a
 {
+  NSLog(@"Result Column: %@", [[a.stack lastObject] stringValue]);
+  NSLog(@"Assembly: %@", a);
   [self.fields addObject:[[a.stack lastObject] stringValue]];
 }
 
 
 - (void)parser:(PKParser *)parser
-didMatchTable_description:(PKAssembly *)a
+didMatchOrder_term:(PKAssembly *)a
 {
+  NSLog(@"order_term");
+  //self.order = [[a.stack lastObject] stringValue];
 }
+
+- (void)parser:(PKParser *)parser
+didMatchOrdering_term:(PKAssembly *)a
+{
+  NSLog(@"ordering_term");
+  self.order = [[a.stack lastObject] stringValue];
+}
+
 
 
 @end
