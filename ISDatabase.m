@@ -51,6 +51,13 @@ static NSString *ColumnNameVersion = @"version";
 - (id)initWithPath:(NSString *)path
             provider:(id<ISDBProvider>)provider
 {
+  // Restrict to the main thread.
+  // Future implementations may wish to implement a dispatch queue for
+  // each database instance and cross post all operations to this to
+  // avoid loading the main thread.  Events would likely still need to
+  // be cross-posted back to the main thread though so the benefits are
+  // limited.
+  assert([[NSThread currentThread] isMainThread]);
   self = [super init];
   if (self) {
     self.path = path;
