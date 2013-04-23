@@ -8,6 +8,12 @@
 
 #import "NSArray+Diff.h"
 
+typedef enum {
+  NSArrayDiffDirectionA,
+  NSArrayDiffDirectionB,
+  NSArrayDiffDirectionAB,
+} NSSArrayDiffDirection;
+
 @implementation NSArrayDiff
 
 + (NSArrayDiff *)diffWithAdditions:(NSArray *)additions
@@ -40,12 +46,8 @@
 
 @end
 
-@implementation NSArray (Diff)
 
-// TODO Make this an enum
-static NSUInteger const kDirectionA = 0;
-static NSUInteger const kDirectionB = 1;
-static NSUInteger const kDirectionAB = 2;
+@implementation NSArray (Diff)
 
 
 - (NSArrayDiff *)diff:(NSArray *)array
@@ -85,12 +87,12 @@ static NSUInteger const kDirectionAB = 2;
       = [NSString stringWithFormat:@"%d:%d", indexA, indexB];
       NSUInteger direction
         = [[dictionary objectForKey:identifier] integerValue];
-      if (direction == kDirectionAB) {
+      if (direction == NSArrayDiffDirectionAB) {
         indexA--; indexB--;
-      } else if (direction == kDirectionA) {
+      } else if (direction == NSArrayDiffDirectionA) {
         [removals addObject:self[indexA]];
         indexA--;
-      } else if (direction == kDirectionB) {
+      } else if (direction == NSArrayDiffDirectionB) {
         [additions addObject:b[indexB]];
         indexB--;
       }
@@ -129,11 +131,11 @@ static NSUInteger const kDirectionAB = 2;
     // can take. Note that we always mark matching entires with
     // kDirectionAB. The actual direction can be inferred.
     if (lengthA == 1 || lengthB == 1) {
-      [cache setObject:[NSNumber numberWithInteger:kDirectionAB]
+      [cache setObject:[NSNumber numberWithInteger:NSArrayDiffDirectionAB]
                 forKey:identifier];
       return 1;
     } else {
-      [cache setObject:[NSNumber numberWithInteger:kDirectionAB]
+      [cache setObject:[NSNumber numberWithInteger:NSArrayDiffDirectionAB]
                 forKey:identifier];
       return [self longestCommonSequenceBetween:a
                                          length:lengthA-1
@@ -154,11 +156,11 @@ static NSUInteger const kDirectionAB = 2;
                                                       length:lengthB-1
                                                        cache:cache];
     if (longestA > longestB) {
-      [cache setObject:[NSNumber numberWithInteger:kDirectionA]
+      [cache setObject:[NSNumber numberWithInteger:NSArrayDiffDirectionA]
                 forKey:identifier];
       return longestA;
     } else {
-      [cache setObject:[NSNumber numberWithInteger:kDirectionB]
+      [cache setObject:[NSNumber numberWithInteger:NSArrayDiffDirectionB]
                 forKey:identifier];
     }
     
