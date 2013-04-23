@@ -105,11 +105,17 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.state = ISDBViewStateInvalid;
     self.notifier = [ISNotifier new];
     
-    [@[@"C", @"A", @"B", @"B", @"A"] diff:@[@"C", @"A", @"B", @"B", @"A"]];
-
-    [@[@"B", @"A", @"N", @"A", @"N", @"A"] diff:@[@"A", @"T", @"A", @"N", @"A"]];
     
-    [@[@"T", @"A", @"N"] diff:@[@"F", @"A", @"N"]];
+    NSArrayDiff *diff = nil;
+    
+    diff = [@[@"C", @"A", @"B", @"B", @"A"] diff:@[@"C", @"A", @"B", @"B", @"A"]];
+    NSLog(@"%@", diff);
+
+    diff = [@[@"B", @"A", @"N", @"A", @"N", @"A"] diff:@[@"A", @"T", @"A", @"N", @"A"]];
+    NSLog(@"%@", diff);
+    
+    diff = [@[@"T", @"A", @"N"] diff:@[@"F", @"A", @"N"]];
+    NSLog(@"%@", diff);
     
   }
   return self;

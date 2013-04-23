@@ -8,7 +8,35 @@
 
 #import "NSArray+Diff.h"
 
-@implementation NSArrayDifference
+@implementation NSArrayDiff
+
++ (NSArrayDiff *)diffWithAdditions:(NSArray *)additions
+                          removals:(NSArray *)removals
+{
+  return [[NSArrayDiff alloc] initWithAdditions:additions
+                                       removals:removals];
+}
+
+- (id)initWithAdditions:(NSArray *)additions
+               removals:(NSArray *)removals
+{
+  self = [super init];
+  if (self) {
+    _additions = additions;
+    _removals = removals;
+  }
+  return self;
+}
+
+
+- (NSString *)description
+{
+  return [NSString stringWithFormat:
+          @"Additions: [%@], Removals: [%@]",
+          [self.additions componentsJoinedByString:@", "],
+          [self.removals componentsJoinedByString:@", "]];
+}
+
 
 @end
 
@@ -20,21 +48,21 @@ static NSUInteger const kDirectionB = 1;
 static NSUInteger const kDirectionAB = 2;
 
 
-- (NSArrayDifference *)diff:(NSArray *)array
+- (NSArrayDiff *)diff:(NSArray *)array
 {
   NSArray *a = self;
   NSArray *b = array;
   
   NSMutableDictionary *dictionary
-  = [NSMutableDictionary dictionaryWithCapacity:3];
+    = [NSMutableDictionary dictionaryWithCapacity:3];
   [self longestCommonSequenceBetween:a
                               length:a.count
                                  and:b
                               length:b.count
                                cache:dictionary];
   
-  NSMutableArray *additionsA = [NSMutableArray arrayWithCapacity:3];
-  NSMutableArray *additionsB = [NSMutableArray arrayWithCapacity:3];
+  NSMutableArray *additions = [NSMutableArray arrayWithCapacity:3];
+  NSMutableArray *removals = [NSMutableArray arrayWithCapacity:3];
   
   // Replay the search following the directions stored in the sparse
   // table and recording the results as we go.
@@ -47,10 +75,12 @@ static NSUInteger const kDirectionAB = 2;
     if (indexA < 0) {
       // Consume the remainder of b.
       NSLog(@"B: %@", b[indexB]);
+      [additions addObject:b[indexB]];
       indexB--;
     } else if (indexB < 0) {
       // Consume the remainder of a.
       NSLog(@"A: %@", a[indexA]);
+      [removals addObject:a[indexA]];
       indexA--;
     } else {
       // Along the pre-stored results in the table.
@@ -65,9 +95,11 @@ static NSUInteger const kDirectionAB = 2;
         indexB--;
       } else if (direction == kDirectionA) {
         NSLog(@"A: %@", a[indexA]);
+        [removals addObject:a[indexA]];
         indexA--;
       } else if (direction == kDirectionB) {
         NSLog(@"B: %@", b[indexB]);
+        [additions addObject:b[indexB]];
         indexB--;
       }
       
@@ -77,7 +109,8 @@ static NSUInteger const kDirectionAB = 2;
   
   NSLog(@"Cache: %@", dictionary);
   
-  NSArrayDifference *diff = [[NSArrayDifference alloc] init];
+  NSArrayDiff *diff = [NSArrayDiff diffWithAdditions:additions
+                                            removals:removals];
   return diff;
 }
 
