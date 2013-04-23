@@ -37,8 +37,8 @@ extern NSInteger ISDBViewIndexUndefined;
 // TODO Consider if these should be optional.
 @optional
 
-- (void) viewBeginUpdate:(ISDBView *)view;
-- (void) viewEndUpdate:(ISDBView *)view;
+- (void) viewBeginUpdates:(ISDBView *)view;
+- (void) viewEndUpdates:(ISDBView *)view;
 - (void) view:(ISDBView *)view
  entryUpdated:(NSNumber *)index;
 - (void) view:(ISDBView *)view

@@ -140,7 +140,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       
       NSArrayDiff *diff = [self.entries diff:updatedEntries];
       
-      [self.notifier notify:@selector(viewBeginUpdate:)
+      [self.notifier notify:@selector(viewBeginUpdates:)
                  withObject:self];
       for (NSNumber *index in diff.removals) {
         [self.notifier notify:@selector(view:entryDeleted:)
@@ -152,7 +152,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
                    withObject:self
                    withObject:index];
       }
-      [self.notifier notify:@selector(viewEndUpdate:)
+      [self.notifier notify:@selector(viewEndUpdates:)
                  withObject:self];
       
       // Then assign the new array.
