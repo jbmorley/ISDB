@@ -50,13 +50,12 @@ static NSUInteger const kDirectionAB = 2;
 
 - (NSArrayDiff *)diff:(NSArray *)array
 {
-  NSArray *a = self;
   NSArray *b = array;
   
   NSMutableDictionary *dictionary
     = [NSMutableDictionary dictionaryWithCapacity:3];
-  [self longestCommonSequenceBetween:a
-                              length:a.count
+  [self longestCommonSequenceBetween:self
+                              length:self.count
                                  and:b
                               length:b.count
                                cache:dictionary];
@@ -69,45 +68,34 @@ static NSUInteger const kDirectionAB = 2;
   // We allow walks along one array (once we've reached the end of the
   // other array (e.g. index = -1) in order to consume the remainder of
   // the array.
-  NSInteger indexA = a.count-1;
-  NSInteger indexB = b.count-1;
+  NSInteger indexA = self.count-1;
+  NSInteger indexB = self.count-1;
   do {
     if (indexA < 0) {
       // Consume the remainder of b.
-      NSLog(@"B: %@", b[indexB]);
       [additions addObject:b[indexB]];
       indexB--;
     } else if (indexB < 0) {
       // Consume the remainder of a.
-      NSLog(@"A: %@", a[indexA]);
-      [removals addObject:a[indexA]];
+      [removals addObject:self[indexA]];
       indexA--;
     } else {
       // Along the pre-stored results in the table.
       NSString *identifier
       = [NSString stringWithFormat:@"%d:%d", indexA, indexB];
-      NSLog(@"Reading: %@", identifier);
       NSUInteger direction
-      = [[dictionary objectForKey:identifier] integerValue];
+        = [[dictionary objectForKey:identifier] integerValue];
       if (direction == kDirectionAB) {
-        NSLog(@"Common: %@", a[indexA]);
-        indexA--;
-        indexB--;
+        indexA--; indexB--;
       } else if (direction == kDirectionA) {
-        NSLog(@"A: %@", a[indexA]);
-        [removals addObject:a[indexA]];
+        [removals addObject:self[indexA]];
         indexA--;
       } else if (direction == kDirectionB) {
-        NSLog(@"B: %@", b[indexB]);
         [additions addObject:b[indexB]];
         indexB--;
       }
-      
     }
   } while ((indexA > -1) || (indexB > -1));
-  
-  
-  NSLog(@"Cache: %@", dictionary);
   
   NSArrayDiff *diff = [NSArrayDiff diffWithAdditions:additions
                                             removals:removals];
@@ -125,7 +113,7 @@ static NSUInteger const kDirectionAB = 2;
   NSUInteger indexA = lengthA - 1;
   NSUInteger indexB = lengthB - 1;
   NSString *identifier
-  = [NSString stringWithFormat:@"%d:%d", indexA, indexB];
+    = [NSString stringWithFormat:@"%d:%d", indexA, indexB];
   
   // TODO Check the cache for a result.
   // TODO We need to store the score in the cache to make it effective.
