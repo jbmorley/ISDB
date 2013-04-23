@@ -85,4 +85,28 @@
 }
 
 
+- (NSString *)database:(FMDatabase *)database
+                insert:(NSDictionary *)entry
+{
+  NSLog(@"Insert: %@", entry);
+  return nil;
+}
+
+
+- (NSString *)database:(FMDatabase *)database
+                update:(NSDictionary *)entry
+{
+  NSLog(@"Update: %@", entry);
+  return nil;
+}
+
+
+- (NSString *)database:(FMDatabase *)database
+                delete:(NSDictionary *)entry
+{
+  NSLog(@"Delete: %@", entry);
+  return nil;
+}
+
+
 @end

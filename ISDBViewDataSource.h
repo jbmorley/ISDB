@@ -25,7 +25,6 @@
 
 @protocol ISDBViewDataSource <NSObject>
 
-// TODO Rename to entries.
 - (NSArray *)database:(FMDatabase *)database
      entriesForOffset:(NSUInteger)offset
                 limit:(NSInteger)limit;

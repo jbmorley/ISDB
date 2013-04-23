@@ -21,7 +21,11 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "ISDBViewDataSource.h"
 
-@interface ISDBQueryViewDataSource : NSObject
+@interface ISDBQueryViewDataSource : NSObject <ISDBViewDataSource>
+
+- (id)initWithEntriesQuery:(NSString *)entriesQuery
+                entryQuery:(NSString *)entryQuery;
 
 @end

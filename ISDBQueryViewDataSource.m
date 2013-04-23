@@ -22,6 +22,52 @@
 
 #import "ISDBQueryViewDataSource.h"
 
+@interface ISDBQueryViewDataSource ()
+
+@property (strong, nonatomic) NSString *entriesQuery;
+@property (strong, nonatomic) NSString *entryQuery;
+
+@end
+
 @implementation ISDBQueryViewDataSource
+
+
+- (id)initWithEntriesQuery:(NSString *)entriesQuery
+                entryQuery:(NSString *)entryQuery
+{
+  self = [super init];
+  if (self) {
+    self.entriesQuery = entriesQuery;
+    self.entryQuery = entryQuery;
+  }
+  return self;
+}
+
+
+- (NSArray *)database:(FMDatabase *)database
+     entriesForOffset:(NSUInteger)offset
+                limit:(NSInteger)limit
+{
+  assert((offset == 0) && (limit == -1));
+  NSMutableArray *entries = [NSMutableArray arrayWithCapacity:3];
+  FMResultSet *result = [database executeQuery:self.entriesQuery];
+  while ([result next]) {
+    [entries addObject:[result resultDict]];
+  }
+  return entries;
+}
+
+
+- (NSDictionary *)database:(FMDatabase *)database
+        entryForIdentifier:(NSString *)identifier
+{
+  FMResultSet *result = [database executeQuery:self.entryQuery
+                          withArgumentsInArray:@[identifier]];
+  if ([result next]) {
+    return [result resultDict];
+  }
+  return nil;
+}
+
 
 @end
