@@ -22,22 +22,6 @@
 
 #import <Foundation/Foundation.h>
 
-@interface NSArrayDiff : NSObject
-
-@property (strong, nonatomic, readonly) NSArray *additions;
-@property (strong, nonatomic, readonly) NSArray *removals;
-
-+ (NSArrayDiff *)diffWithAdditions:(NSArray *)additions
-                          removals:(NSArray *)removals;
-
-- (id)initWithAdditions:(NSArray *)additions
-               removals:(NSArray *)removals;
-
-@end
-
-
-@interface NSArray (Diff)
-
-- (NSArrayDiff *)diff:(NSArray *)array;
+@interface ISDBQueryViewDataSource : NSObject
 
 @end
