@@ -52,14 +52,12 @@ typedef enum {
 
 - (NSArrayDiff *)diff:(NSArray *)array
 {
-  NSArray *b = array;
-  
   NSMutableDictionary *dictionary
     = [NSMutableDictionary dictionaryWithCapacity:3];
   [self longestCommonSequenceBetween:self
                               length:self.count
-                                 and:b
-                              length:b.count
+                                 and:array
+                              length:array.count
                                cache:dictionary];
   
   NSMutableArray *additions = [NSMutableArray arrayWithCapacity:3];
@@ -70,34 +68,38 @@ typedef enum {
   // We allow walks along one array (once we've reached the end of the
   // other array (e.g. index = -1) in order to consume the remainder of
   // the array.
-  NSInteger indexA = self.count-1;
-  NSInteger indexB = self.count-1;
+  NSInteger index = self.count-1;
+  NSInteger indexOther = array.count-1;
   do {
-    if (indexA < 0) {
+    if (index < 0) {
       // Consume the remainder of b.
-      [additions addObject:b[indexB]];
-      indexB--;
-    } else if (indexB < 0) {
+      [additions addObject:array[indexOther]];
+      [additions addObject:[NSNumber numberWithInteger:indexOther]];
+      indexOther--;
+    } else if (indexOther < 0) {
       // Consume the remainder of a.
-      [removals addObject:self[indexA]];
-      indexA--;
+      [removals addObject:self[index]];
+      [removals addObject:[NSNumber numberWithInteger:index]];
+      index--;
     } else {
       // Along the pre-stored results in the table.
       NSString *identifier
-      = [NSString stringWithFormat:@"%d:%d", indexA, indexB];
+        = [NSString stringWithFormat:@"%d:%d", index, indexOther];
       NSUInteger direction
         = [[dictionary objectForKey:identifier] integerValue];
       if (direction == NSArrayDiffDirectionAB) {
-        indexA--; indexB--;
+        index--; indexOther--;
       } else if (direction == NSArrayDiffDirectionA) {
-        [removals addObject:self[indexA]];
-        indexA--;
+        [removals addObject:self[index]];
+        [removals addObject:[NSNumber numberWithInteger:index]];
+        index--;
       } else if (direction == NSArrayDiffDirectionB) {
-        [additions addObject:b[indexB]];
-        indexB--;
+        [additions addObject:array[indexOther]];
+        [additions addObject:[NSNumber numberWithInteger:indexOther]];
+        indexOther--;
       }
     }
-  } while ((indexA > -1) || (indexB > -1));
+  } while ((index > -1) || (indexOther > -1));
   
   NSArrayDiff *diff = [NSArrayDiff diffWithAdditions:additions
                                             removals:removals];
