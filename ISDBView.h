@@ -23,6 +23,7 @@
 #import <Foundation/Foundation.h>
 #import "FMDatabase.h"
 #import "ISDBCondition.h"
+#import "ISDBViewDataSource.h"
 
 // TODO Assert that we're running on the main thread.
 
@@ -52,26 +53,28 @@ entryInserted:(NSNumber *)index;
 @property (nonatomic, readonly) NSUInteger count;
 
 - (id) initWithDatabase:(FMDatabase *)database
-                  table:(NSString *)table
-             identifier:(NSString *)identifier
-                orderBy:(NSString *)orderBy
-             conditions:(NSArray *)conditions;
+             dataSource:(id<ISDBViewDataSource>)dataSource;
 
-- (NSInteger) indexForIdentifier:(id)identifier;
+- (void)invalidate;
 
 - (NSDictionary *) entryForIndex:(NSInteger)index;
 - (NSDictionary *) entryForIdentifier:(id)identifier;
 
-- (NSDictionary *) insert:(NSDictionary *)entry;
-- (BOOL) update:(NSDictionary *)entry;
-- (BOOL) delete:(NSDictionary *)entry;
+- (void)entryForIndex:(NSInteger)index
+           completion:(void (^)(NSDictionary *))completionBlock;
+- (void)entryForIdentifier:(id)identifier
+                completion:(void (^)(NSDictionary *))completionBlock;
+
+- (NSString *)insert:(NSDictionary *)entry;
+- (NSString *)update:(NSDictionary *)entry;
+- (NSString *)delete:(NSDictionary *)entry;
 
 - (void) insert:(NSDictionary *)entry
-     completion:(void (^)(NSDictionary *))completionBlock;
+     completion:(void (^)(NSString *))completionBlock;
 - (void) update:(NSDictionary *)entry
-     completion:(void (^)(BOOL))completionBlock;
+     completion:(void (^)(NSString *))completionBlock;
 - (void) delete:(NSDictionary *)entry
-     completion:(void (^)(BOOL))completionBlock;
+     completion:(void (^)(NSString *))completionBlock;
 
 - (void) addObserver:(id<ISDBViewObserver>)observer;
 - (void) removeObserver:(id<ISDBViewObserver>)observer;

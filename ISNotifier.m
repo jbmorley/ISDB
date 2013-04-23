@@ -30,6 +30,9 @@
 @implementation ISNotifier
 
 
+// TODO Purge null entries.
+// N.B. They will become nil when the references disappear.
+
 - (id) init
 {
   self = [super init];

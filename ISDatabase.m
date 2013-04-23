@@ -24,6 +24,8 @@
 #import "FMDatabase.h"
 #import "FMDatabaseAdditions.h"
 
+// TODO Add a trigger to the FMDatabase to notify the views when they have changed.
+
 
 @interface ISDatabase ()
 
@@ -46,6 +48,10 @@ static NSString *ColumnNameVersion = @"version";
 // It will make a point of returning the same view by ID.
 // We should be able to guard against people incorrectly creating
 // ISDBView directly by using categories.
+
+
+// TODO Store weak references to the views so we know when they're no
+// longer in use.  This also avoids reference cycles.
 
 
 - (id)initWithPath:(NSString *)path
@@ -278,18 +284,11 @@ static NSString *ColumnNameVersion = @"version";
 #pragma mark - Accessors
 
 
-- (ISDBView *)table:(NSString *)table
-         identifier:(NSString *)identifier
-            orderBy:(NSString *)orderBy
-         conditions:(NSArray *)conditions
+- (ISDBView *)viewWithDataSource:(id<ISDBViewDataSource>)dataSource
 {
   assert(self.state == ISDatabaseStateReady);
-  ISDBView *view
-    = [[ISDBView alloc] initWithDatabase:self.database
-                                   table:table
-                              identifier:identifier
-                                 orderBy:orderBy
-                              conditions:conditions];
+  ISDBView *view = [[ISDBView alloc] initWithDatabase:self.database
+                                           dataSource:dataSource];
   return view;
 }
 
