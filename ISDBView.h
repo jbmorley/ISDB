@@ -22,7 +22,6 @@
 
 #import <Foundation/Foundation.h>
 #import "FMDatabase.h"
-#import "ISDBCondition.h"
 #import "ISDBViewDataSource.h"
 
 // TODO Assert that we're running on the main thread.

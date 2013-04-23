@@ -22,7 +22,6 @@
 
 #import "ISDBView.h"
 #import "ISNotifier.h"
-#import "ISDBParser.h"
 #import "NSArray+Diff.h"
 
 typedef enum {
