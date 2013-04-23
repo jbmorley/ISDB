@@ -105,17 +105,13 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.state = ISDBViewStateInvalid;
     self.notifier = [ISNotifier new];
     
-    
-    NSArrayDiff *diff = nil;
-    
-    diff = [@[@"C", @"A", @"B", @"B", @"A"] diff:@[@"C", @"A", @"B", @"B", @"A"]];
-    NSLog(@"%@", diff);
-
-    diff = [@[@"B", @"A", @"N", @"A", @"N", @"A"] diff:@[@"A", @"T", @"A", @"N", @"A"]];
-    NSLog(@"%@", diff);
-    
-    diff = [@[@"T", @"A", @"N"] diff:@[@"F", @"A", @"N"]];
-    NSLog(@"%@", diff);
+//    NSArrayDiff *diff = nil;
+//    diff = [@[@"C", @"A", @"B", @"B", @"A"] diff:@[@"C", @"A", @"B", @"B", @"A"]];
+//    NSLog(@"%@", diff);
+//    diff = [@[@"B", @"A", @"N", @"A", @"N", @"A"] diff:@[@"A", @"T", @"A", @"N", @"A"]];
+//    NSLog(@"%@", diff);
+//    diff = [@[@"T", @"A", @"N"] diff:@[@"F", @"A", @"N"]];
+//    NSLog(@"%@", diff);
     
   }
   return self;
@@ -138,25 +134,56 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     NSArray *updatedEntries = [self.dataSource database:self.database
                                        entriesForOffset:0
                                                   limit:-1];
-    // TODO Bits missing here.
-    
-    // Apparently we need to use the longest common sequence solution.
     
     // Compare the two arrays making the changes...
-    
-    // Then assign the new array.
-    self.entries = updatedEntries;
-    
-    // Notify the clients of the changes.
+    if (self.entries != nil) {
+      
+      NSArrayDiff *diff = [self.entries diff:updatedEntries];
+      
+      [self.notifier notify:@selector(viewBeginUpdate:)
+                 withObject:self];
+      for (NSNumber *index in diff.removals) {
+        [self.notifier notify:@selector(view:entryDeleted:)
+                   withObject:self
+                   withObject:index];
+      }
+      for (NSNumber *index in diff.additions) {
+        [self.notifier notify:@selector(view:entryInserted:)
+                   withObject:self
+                   withObject:index];
+      }
+      [self.notifier notify:@selector(viewEndUpdate:)
+                 withObject:self];
+      
+      // Then assign the new array.
+      self.entries = updatedEntries;
+      
+    } else {
+      
+      // Then assign the new array.
+      self.entries = updatedEntries;
+      
+    }
   }
 }
 
 
 - (NSUInteger)count
 {
-  // TODO This is not thread safe.
-  [self update];
-  return self.entries.count;
+  __block NSUInteger result;
+  [self countCompletion:^(NSUInteger count) {
+    result = count;
+  }];
+  return result;
+}
+
+
+- (void)countCompletion:(void (^)(NSUInteger))completionBlock
+{
+  [self executeSynchronouslyOnMainThread:^{
+    [self update];
+    completionBlock(self.entries.count);
+  }];
 }
 
 

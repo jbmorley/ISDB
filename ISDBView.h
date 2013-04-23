@@ -34,8 +34,11 @@ extern NSInteger ISDBViewIndexUndefined;
 @class ISDBView;
 
 @protocol ISDBViewObserver <NSObject>
+// TODO Consider if these should be optional.
 @optional
 
+- (void) viewBeginUpdate:(ISDBView *)view;
+- (void) viewEndUpdate:(ISDBView *)view;
 - (void) view:(ISDBView *)view
  entryUpdated:(NSNumber *)index;
 - (void) view:(ISDBView *)view
@@ -49,8 +52,8 @@ entryInserted:(NSNumber *)index;
 
 @interface ISDBView : NSObject
 
-@property (nonatomic) BOOL autoIncrementIdentifier;
 @property (nonatomic, readonly) NSUInteger count;
+- (void)countCompletion:(void (^)(NSUInteger))completionBlock;
 
 - (id) initWithDatabase:(FMDatabase *)database
              dataSource:(id<ISDBViewDataSource>)dataSource;
