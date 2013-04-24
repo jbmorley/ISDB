@@ -22,22 +22,20 @@
 
 #import "ISNotifier.h"
 #import "ISWeakReference.h"
+#import "ISWeakReferenceArray.h"
 
 @interface ISNotifier ()
-@property (strong, nonatomic) NSMutableArray *observers;
+@property (strong, nonatomic) ISWeakReferenceArray *observers;
 @end
 
 @implementation ISNotifier
 
 
-// TODO Purge null entries.
-// N.B. They will become nil when the references disappear.
-
 - (id) init
 {
   self = [super init];
   if (self) {
-    self.observers = [NSMutableArray arrayWithCapacity:3];
+    self.observers = [ISWeakReferenceArray arrayWithCapacity:3];
   }
   return self;
 }
@@ -51,33 +49,23 @@
 
 - (void) addObserver:(id)observer
 {
-  [self.observers addObject:[[ISWeakReference alloc] initWithObject:observer]];
+  [self.observers addObject:observer];
 }
 
 
 - (void) removeObserver:(id)observer
 {
-  // Clean up any nil references and the current reference.
-  NSMutableIndexSet *indexes = [NSMutableIndexSet indexSet];
-  for (NSUInteger i = 0; i < self.observers.count; i++) {
-    ISWeakReference *reference = self.observers[i];
-    if (reference.object == nil) {
-      [indexes addIndex:i];
-    } else if (reference.object == observer) {
-      [indexes addIndex:i];
-    }
-  }
-  [self.observers removeObjectsAtIndexes:indexes];
+  [self.observers removeObject:observer];
 }
 
 
 - (void) notify:(SEL)selector
 {
-  for (ISWeakReference *reference in self.observers) {
-    if ([reference.object respondsToSelector:selector]) {
+  for (id object in self.observers) {
+    if ([object respondsToSelector:selector]) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-      [reference.object performSelector:selector];
+      [object performSelector:selector];
 #pragma clang diagnostic pop
     }
   }
@@ -87,12 +75,12 @@
 - (void) notify:(SEL)selector
      withObject:(id)anObject
 {
-  for (ISWeakReference *reference in self.observers) {
-    if ([reference.object respondsToSelector:selector]) {
+  for (id object in self.observers) {
+    if ([object respondsToSelector:selector]) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-      [reference.object performSelector:selector
-                             withObject:anObject];
+      [object performSelector:selector
+                   withObject:anObject];
 #pragma clang diagnostic pop
     }
   }
@@ -103,13 +91,13 @@
      withObject:(id)anObject
      withObject:(id)anotherObject
 {
-  for (ISWeakReference *reference in self.observers) {
-    if ([reference.object respondsToSelector:selector]) {
+  for (id object in self.observers) {
+    if ([object respondsToSelector:selector]) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-      [reference.object performSelector:selector
-                             withObject:anObject
-                             withObject:anotherObject];
+      [object performSelector:selector
+                   withObject:anObject
+                   withObject:anotherObject];
 #pragma clang diagnostic pop
     }
   }
