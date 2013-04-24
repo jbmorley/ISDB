@@ -88,8 +88,17 @@
 - (NSString *)database:(FMDatabase *)database
                 insert:(NSDictionary *)entry
 {
-  // TODO
-  NSLog(@"Insert: %@", entry);
+  NSString *keys = [entry.allKeys componentsJoinedByString:@", "];
+  NSString *values = [NSString stringWithFormat:@":%@", [entry.allKeys componentsJoinedByString:@", :"]];
+  NSString *query = [NSString stringWithFormat:
+                     @"INSERT INTO %@ (%@) VALUES (%@)",
+                     self.table,
+                     keys,
+                     values];
+  if ([database executeUpdate:query
+      withParameterDictionary:entry]) {
+    return entry[self.identifier];
+  }
   return nil;
 }
 
