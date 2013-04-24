@@ -20,17 +20,13 @@
 // SOFTWARE.
 // 
 
-#import "ISNotifierReference.h"
+#import <Foundation/Foundation.h>
 
-@implementation ISNotifierReference
+@interface ISWeakReference : NSObject
 
-- (id) initWithObject:(NSObject *)object
-{
-  self = [super init];
-  if (self) {
-    self.object = object;
-  }
-  return self;
-}
+@property (weak, nonatomic) NSObject *object;
+
++ (ISWeakReference *)referenceWithObject:(id)object;
+- (id)initWithObject:(id)object;
 
 @end

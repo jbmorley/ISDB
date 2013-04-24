@@ -88,6 +88,7 @@
 - (NSString *)database:(FMDatabase *)database
                 insert:(NSDictionary *)entry
 {
+  // TODO
   NSLog(@"Insert: %@", entry);
   return nil;
 }
@@ -96,6 +97,7 @@
 - (NSString *)database:(FMDatabase *)database
                 update:(NSDictionary *)entry
 {
+  // TODO
   NSLog(@"Update: %@", entry);
   return nil;
 }
@@ -104,6 +106,7 @@
 - (NSString *)database:(FMDatabase *)database
                 delete:(NSDictionary *)entry
 {
+  // TODO
   NSLog(@"Delete: %@", entry);
   return nil;
 }

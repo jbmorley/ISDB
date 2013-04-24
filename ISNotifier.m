@@ -21,7 +21,7 @@
 // 
 
 #import "ISNotifier.h"
-#import "ISNotifierReference.h"
+#import "ISWeakReference.h"
 
 @interface ISNotifier ()
 @property (strong, nonatomic) NSMutableArray *observers;
@@ -51,7 +51,7 @@
 
 - (void) addObserver:(id)observer
 {
-  [self.observers addObject:[[ISNotifierReference alloc] initWithObject:observer]];
+  [self.observers addObject:[[ISWeakReference alloc] initWithObject:observer]];
 }
 
 
@@ -60,7 +60,7 @@
   // Clean up any nil references and the current reference.
   NSMutableIndexSet *indexes = [NSMutableIndexSet indexSet];
   for (NSUInteger i = 0; i < self.observers.count; i++) {
-    ISNotifierReference *reference = self.observers[i];
+    ISWeakReference *reference = self.observers[i];
     if (reference.object == nil) {
       [indexes addIndex:i];
     } else if (reference.object == observer) {
@@ -73,7 +73,7 @@
 
 - (void) notify:(SEL)selector
 {
-  for (ISNotifierReference *reference in self.observers) {
+  for (ISWeakReference *reference in self.observers) {
     if ([reference.object respondsToSelector:selector]) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
@@ -87,7 +87,7 @@
 - (void) notify:(SEL)selector
      withObject:(id)anObject
 {
-  for (ISNotifierReference *reference in self.observers) {
+  for (ISWeakReference *reference in self.observers) {
     if ([reference.object respondsToSelector:selector]) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
@@ -103,7 +103,7 @@
      withObject:(id)anObject
      withObject:(id)anotherObject
 {
-  for (ISNotifierReference *reference in self.observers) {
+  for (ISWeakReference *reference in self.observers) {
     if ([reference.object respondsToSelector:selector]) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
