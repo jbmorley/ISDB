@@ -23,6 +23,7 @@
 #import "ISDatabase.h"
 #import "FMDatabase.h"
 #import "FMDatabaseAdditions.h"
+#import "ISWeakReferenceArray.h"
 
 // TODO Add a trigger to the FMDatabase to notify the views when they have changed.
 
@@ -36,6 +37,7 @@
 @property (nonatomic, readonly) NSString *versionTable;
 @property (nonatomic, readonly) NSUInteger version;
 @property (nonatomic, readonly) NSUInteger currentVersion;
+@property (strong, nonatomic) ISWeakReferenceArray *views;
 
 @end
 
@@ -69,6 +71,7 @@ static NSString *ColumnNameVersion = @"version";
     self.path = path;
     self.state = ISDatabaseStateClosed;
     self.provider = provider;
+    self.views = [ISWeakReferenceArray arrayWithCapacity:3];
   }
   return self;
 }
@@ -281,6 +284,14 @@ static NSString *ColumnNameVersion = @"version";
 }
 
 
+- (void)invalidate
+{
+  for (ISDBView *view in self.views) {
+    [view invalidate];
+  }
+}
+
+
 #pragma mark - Accessors
 
 
@@ -289,6 +300,7 @@ static NSString *ColumnNameVersion = @"version";
   assert(self.state == ISDatabaseStateReady);
   ISDBView *view = [[ISDBView alloc] initWithDatabase:self.database
                                            dataSource:dataSource];
+  [self.views addObject:view];
   return view;
 }
 
