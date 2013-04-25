@@ -206,7 +206,8 @@ static NSString *ColumnNameVersion = @"version";
       }
       
       // Register for updates.
-      [self.database updateHook];
+      [self.database update:self
+                   selector:@selector(databaseDidUpdate)];
       
       return YES;
 
@@ -230,6 +231,12 @@ static NSString *ColumnNameVersion = @"version";
   
   self.database = nil;
   return NO;
+}
+
+
+- (void)databaseDidUpdate
+{
+  [self invalidate];
 }
 
 

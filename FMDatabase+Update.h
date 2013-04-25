@@ -11,6 +11,7 @@
 
 @interface FMDatabase (Update)
 
-- (void)updateHook;
+- (void)update:(id)target
+      selector:(SEL)selector;
 
 @end
