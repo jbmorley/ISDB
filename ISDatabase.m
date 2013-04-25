@@ -24,6 +24,7 @@
 #import "FMDatabase.h"
 #import "FMDatabaseAdditions.h"
 #import "ISWeakReferenceArray.h"
+#import "FMDatabase+Update.h"
 
 // TODO Add a trigger to the FMDatabase to notify the views when they have changed.
 
@@ -203,6 +204,9 @@ static NSString *ColumnNameVersion = @"version";
         self.state = ISDatabaseStateReady;
         
       }
+      
+      // Register for updates.
+      [self.database updateHook];
       
       return YES;
 

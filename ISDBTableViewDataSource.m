@@ -111,6 +111,8 @@
   if ([database executeUpdate:query
       withParameterDictionary:entry]) {
     return entry[self.identifier];
+  } else {
+    NSLog(@"%@", [database lastErrorMessage]);
   }
   
   // TODO What about auto-incrementing identifiers.
@@ -123,7 +125,7 @@
                 update:(NSDictionary *)entry
 {
   // Check that the identifier has been specified.
-  if ([entry objectForKey:entry] == nil) {
+  if ([entry objectForKey:self.identifier] == nil) {
     return nil;
   }
   
@@ -152,6 +154,8 @@
   if ([database executeUpdate:query
       withParameterDictionary:entry]) {
     return entry[self.identifier];
+  } else {
+    NSLog(@"%@", [database lastErrorMessage]);
   }
   return nil;
 }
@@ -161,7 +165,7 @@
                 delete:(NSDictionary *)entry
 {
   // Check that the identifier has been specified.
-  if ([entry objectForKey:entry] == nil) {
+  if ([entry objectForKey:self.identifier] == nil) {
     return nil;
   }
   
@@ -176,6 +180,8 @@
   if ([database executeUpdate:query
       withParameterDictionary:entry]) {
     return entry[self.identifier];
+  } else {
+    NSLog(@"%@", [database lastErrorMessage]);
   }
   return nil;
 }
