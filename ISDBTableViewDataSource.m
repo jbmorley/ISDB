@@ -88,17 +88,33 @@
 - (NSString *)database:(FMDatabase *)database
                 insert:(NSDictionary *)entry
 {
-  NSString *keys = [entry.allKeys componentsJoinedByString:@", "];
-  NSString *values = [NSString stringWithFormat:@":%@", [entry.allKeys componentsJoinedByString:@", :"]];
-  NSString *query = [NSString stringWithFormat:
-                     @"INSERT INTO %@ (%@) VALUES (%@)",
-                     self.table,
-                     keys,
-                     values];
+  NSMutableString *query = [NSMutableString stringWithCapacity:100];
+  [query appendString:@"INSERT INTO "];
+  [query appendString:self.table];
+  [query appendString:@" ("];
+  for (int i=0; i<entry.allKeys.count; i++) {
+    if (i > 0) {
+      [query appendString:@", "];
+    }
+    [query appendString:entry.allKeys[i]];
+  }
+  [query appendString:@") VALUES ("];
+  for (int i=0; i<entry.allKeys.count; i++) {
+    if (i > 0) {
+      [query appendString:@", "];
+    }
+    [query appendString:@":"];
+    [query appendString:entry.allKeys[i]];
+  }
+  [query appendString:@")"];
+  
   if ([database executeUpdate:query
       withParameterDictionary:entry]) {
     return entry[self.identifier];
   }
+  
+  // TODO What about auto-incrementing identifiers.
+  
   return nil;
 }
 
@@ -106,8 +122,31 @@
 - (NSString *)database:(FMDatabase *)database
                 update:(NSDictionary *)entry
 {
-  // TODO
-  NSLog(@"Update: %@", entry);
+  NSMutableString *query = [NSMutableString stringWithCapacity:100];
+  [query appendString:@"UPDATE "];
+  [query appendString:self.table];
+  [query appendString:@" SET "];
+  NSUInteger count = 0;
+  for (int i=0; i<entry.allKeys.count; i++) {
+    if (count > 0) {
+      [query appendString:@", "];
+    }
+    NSString *key = entry.allKeys[i];
+    if (![key isEqualToString:self.identifier]) {
+      [query appendString:entry.allKeys[i]];
+      [query appendString:@" = :"];
+      [query appendString:entry.allKeys[i]];
+      count++;
+    }
+  }
+  [query appendString:@" WHERE "];
+  [query appendString:self.identifier];
+  [query appendString:@" = ?"];
+  
+  if ([database executeUpdate:query
+      withParameterDictionary:entry]) {
+    return entry[self.identifier];
+  }
   return nil;
 }
 
