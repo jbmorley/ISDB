@@ -43,6 +43,7 @@
   if (self) {
     self.table = table;
     self.identifier = identifier;
+    self.orderBy = orderBy;
     self.select = [NSString stringWithFormat:
                    @"SELECT * FROM %@ ORDER BY %@",
                    self.table,
