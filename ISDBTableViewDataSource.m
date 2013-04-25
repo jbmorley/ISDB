@@ -122,6 +122,11 @@
 - (NSString *)database:(FMDatabase *)database
                 update:(NSDictionary *)entry
 {
+  // Check that the identifier has been specified.
+  if ([entry objectForKey:entry] == nil) {
+    return nil;
+  }
+  
   NSMutableString *query = [NSMutableString stringWithCapacity:100];
   [query appendString:@"UPDATE "];
   [query appendString:self.table];
@@ -141,7 +146,8 @@
   }
   [query appendString:@" WHERE "];
   [query appendString:self.identifier];
-  [query appendString:@" = ?"];
+  [query appendString:@" = :"];
+  [query appendString:self.identifier];
   
   if ([database executeUpdate:query
       withParameterDictionary:entry]) {
@@ -154,8 +160,23 @@
 - (NSString *)database:(FMDatabase *)database
                 delete:(NSDictionary *)entry
 {
-  // TODO
-  NSLog(@"Delete: %@", entry);
+  // Check that the identifier has been specified.
+  if ([entry objectForKey:entry] == nil) {
+    return nil;
+  }
+  
+  NSMutableString *query = [NSMutableString stringWithCapacity:50];
+  [query appendString:@"DELETE FROM "];
+  [query appendString:self.table];
+  [query appendString:@" WHERE "];
+  [query appendString:self.identifier];
+  [query appendString:@" = :"];
+  [query appendString:self.identifier];
+  
+  if ([database executeUpdate:query
+      withParameterDictionary:entry]) {
+    return entry[self.identifier];
+  }
   return nil;
 }
 
