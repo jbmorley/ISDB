@@ -236,7 +236,10 @@ static NSString *ColumnNameVersion = @"version";
 
 - (void)databaseDidUpdate
 {
-  [self invalidate];
+  NSLog(@"databaseDidUpdate");
+  for (ISDBView *view in self.views) {
+    [view reload];
+  }
 }
 
 
@@ -291,14 +294,6 @@ static NSString *ColumnNameVersion = @"version";
   @catch (NSException *exception) {
     [self.database rollback];
     @throw exception;
-  }
-}
-
-
-- (void)invalidate
-{
-  for (ISDBView *view in self.views) {
-    [view invalidate];
   }
 }
 

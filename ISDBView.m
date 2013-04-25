@@ -124,6 +124,16 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
+- (void)reload
+{
+  [self invalidate];
+  // Force an update through if we have active observers.
+  if (self.notifier.count > 0) {
+    [self update];
+  }
+}
+
+
 - (void)update
 {
   assert([[NSThread currentThread] isMainThread]);
@@ -136,17 +146,22 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     
     // Compare the two arrays making the changes...
     if (self.entries != nil) {
+      NSLog(@"Calculating diff...");
       
       NSArrayDiff *diff = [self.entries diff:updatedEntries];
+      
+      NSLog(@"Diff complete...");
       
       [self.notifier notify:@selector(viewBeginUpdates:)
                  withObject:self];
       for (NSNumber *index in diff.removals) {
+        NSLog(@"Remove: %@", index);
         [self.notifier notify:@selector(view:entryDeleted:)
                    withObject:self
                    withObject:index];
       }
       for (NSNumber *index in diff.additions) {
+        NSLog(@"Add: %@", index);
         [self.notifier notify:@selector(view:entryInserted:)
                    withObject:self
                    withObject:index];

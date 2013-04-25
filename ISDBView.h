@@ -57,7 +57,11 @@ entryInserted:(NSNumber *)index;
 - (id) initWithDatabase:(FMDatabase *)database
              dataSource:(id<ISDBViewDataSource>)dataSource;
 
+// Invalidate the view and wait for a lazy update.
 - (void)invalidate;
+
+// Invalidate and udpate immediately if there are active observers.
+- (void)reload;
 
 - (NSDictionary *) entryForIndex:(NSInteger)index;
 - (NSDictionary *) entryForIdentifier:(id)identifier;

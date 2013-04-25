@@ -87,12 +87,10 @@ typedef enum {
   do {
     if (index < 0) {
       // Consume the remainder of b.
-      [additions addObject:array[indexOther]];
       [additions addObject:[NSNumber numberWithInteger:indexOther]];
       indexOther--;
     } else if (indexOther < 0) {
       // Consume the remainder of a.
-      [removals addObject:self[index]];
       [removals addObject:[NSNumber numberWithInteger:index]];
       index--;
     } else {
@@ -104,11 +102,9 @@ typedef enum {
       if (direction == NSArrayDiffDirectionAB) {
         index--; indexOther--;
       } else if (direction == NSArrayDiffDirectionA) {
-        [removals addObject:self[index]];
         [removals addObject:[NSNumber numberWithInteger:index]];
         index--;
       } else if (direction == NSArrayDiffDirectionB) {
-        [additions addObject:array[indexOther]];
         [additions addObject:[NSNumber numberWithInteger:indexOther]];
         indexOther--;
       }
