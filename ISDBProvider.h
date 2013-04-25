@@ -21,6 +21,7 @@
 // 
 
 #import <Foundation/Foundation.h>
+#import "FMDatabase.h"
 
 @protocol ISDBProvider <NSObject>
 - (BOOL)databaseCreate:(FMDatabase *)database;
