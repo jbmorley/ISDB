@@ -26,13 +26,10 @@
 #import "ISWeakReferenceArray.h"
 #import "FMDatabase+Update.h"
 
-// TODO Add a trigger to the FMDatabase to notify the views when they have changed.
-
 
 @interface ISDatabase ()
 
 @property (strong, nonatomic) NSString *path;
-@property (strong, nonatomic) FMDatabase *database;
 @property (weak, nonatomic) id<ISDBProvider> provider;
 @property (nonatomic) ISDatabaseState state;
 @property (nonatomic, readonly) NSString *versionTable;
@@ -46,16 +43,6 @@
 @implementation ISDatabase
 
 static NSString *ColumnNameVersion = @"version";
-
-// TODO ISDatabase owns the views, stores them by query and tracks
-// interdependence between views (somehow).
-// It will make a point of returning the same view by ID.
-// We should be able to guard against people incorrectly creating
-// ISDBView directly by using categories.
-
-
-// TODO Store weak references to the views so we know when they're no
-// longer in use.  This also avoids reference cycles.
 
 
 - (id)initWithPath:(NSString *)path

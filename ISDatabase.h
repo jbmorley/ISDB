@@ -38,8 +38,7 @@ typedef enum {
                         
 @interface ISDatabase : NSObject
 
-// TODO Consider passing the provider into the open call to work
-// around the slightly weird ownership model of the provider.
+@property (strong, nonatomic) FMDatabase *database;
 
 - (id)initWithPath:(NSString *)path
           provider:(id<ISDBProvider>)provider;
