@@ -26,6 +26,7 @@
 
 @property (strong, nonatomic) NSString *entriesQuery;
 @property (strong, nonatomic) NSString *entryQuery;
+@property (strong, nonatomic) NSString *identifier;
 
 @end
 
@@ -34,11 +35,13 @@
 
 - (id)initWithEntriesQuery:(NSString *)entriesQuery
                 entryQuery:(NSString *)entryQuery
+                identifier:(NSString *)identifier
 {
   self = [super init];
   if (self) {
     self.entriesQuery = entriesQuery;
     self.entryQuery = entryQuery;
+    self.identifier = identifier;
   }
   return self;
 }
@@ -52,7 +55,7 @@
   NSMutableArray *entries = [NSMutableArray arrayWithCapacity:3];
   FMResultSet *result = [database executeQuery:self.entriesQuery];
   while ([result next]) {
-    [entries addObject:[result resultDict]];
+    [entries addObject:[result objectForColumnName:self.identifier]];
   }
   return entries;
 }

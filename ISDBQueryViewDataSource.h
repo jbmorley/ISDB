@@ -26,6 +26,7 @@
 @interface ISDBQueryViewDataSource : NSObject <ISDBViewDataSource>
 
 - (id)initWithEntriesQuery:(NSString *)entriesQuery
-                entryQuery:(NSString *)entryQuery;
+                entryQuery:(NSString *)entryQuery
+                identifier:(NSString *)identifier;
 
 @end

@@ -68,7 +68,7 @@
   NSMutableArray *entries = [NSMutableArray arrayWithCapacity:3];
   FMResultSet *result = [database executeQuery:self.select];
   while ([result next]) {
-    [entries addObject:[result resultDict]];
+    [entries addObject:[result objectForColumnName:self.identifier]];
   }
   return entries;
 }

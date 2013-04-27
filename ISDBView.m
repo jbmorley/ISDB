@@ -24,6 +24,7 @@
 #import "ISNotifier.h"
 #import "NSArray+Diff.h"
 
+
 #define BEGIN_TIME \
   NSDate *start = [NSDate date];
 #define END_TIME(a) \
@@ -223,7 +224,9 @@ static NSString *const kSQLiteTypeInteger = @"integer";
   [self executeSynchronouslyOnMainThread:^{
     [self update];
     if (index < self.entries.count) {
-      NSDictionary *entry = [self.entries objectAtIndex:index];
+      NSString *identifier = [self.entries objectAtIndex:index];
+      NSDictionary *entry = [self.dataSource database:self.database
+                                   entryForIdentifier:identifier];
       completionBlock(entry);
     } else {
       completionBlock(nil);
