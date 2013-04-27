@@ -29,7 +29,7 @@
      entriesForOffset:(NSUInteger)offset
                 limit:(NSInteger)limit;
 - (NSDictionary *)database:(FMDatabase *)database
-        entryForIdentifier:(NSString *)identifier;
+        entryForIdentifier:(id)identifier;
 
 @optional
 - (NSString *)database:(FMDatabase *)database

@@ -75,7 +75,7 @@
 
 
 - (NSDictionary *)database:(FMDatabase *)database
-        entryForIdentifier:(NSString *)identifier
+        entryForIdentifier:(id)identifier
 {
   FMResultSet *result = [database executeQuery:self.selectByIdentifier
                           withArgumentsInArray:@[identifier]];
