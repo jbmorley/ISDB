@@ -24,7 +24,7 @@
 #import "FMDatabase.h"
 #import "ISDBProvider.h"
 #import "ISDBView.h"
-#import "ISDBViewDataSource.h"
+#import "ISDBDataSource.h"
 
 @class ISDatabase;
 
@@ -46,6 +46,6 @@ typedef enum {
 - (BOOL)open;
 - (void)close;
 
-- (ISDBView *)viewWithDataSource:(id<ISDBViewDataSource>)dataSource;
+- (ISDBView *)viewWithDataSource:(id<ISDBDataSource>)dataSource;
 
 @end

@@ -23,7 +23,7 @@
 #import <Foundation/Foundation.h>
 #import "FMDatabase.h"
 
-@protocol ISDBViewDataSource <NSObject>
+@protocol ISDBDataSource <NSObject>
 
 - (NSArray *)database:(FMDatabase *)database
      entriesForOffset:(NSUInteger)offset

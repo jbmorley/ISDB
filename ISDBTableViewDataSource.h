@@ -21,9 +21,9 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "ISDBViewDataSource.h"
+#import "ISDBDataSource.h"
 
-@interface ISDBTableViewDataSource : NSObject <ISDBViewDataSource>
+@interface ISDBTableViewDataSource : NSObject <ISDBDataSource>
 
 - (id)initWithTable:(NSString *)table
          identifier:(NSString *)identifier

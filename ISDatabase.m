@@ -303,7 +303,7 @@ static NSString *ColumnNameVersion = @"version";
 #pragma mark - Accessors
 
 
-- (ISDBView *)viewWithDataSource:(id<ISDBViewDataSource>)dataSource
+- (ISDBView *)viewWithDataSource:(id<ISDBDataSource>)dataSource
 {
   assert(self.state == ISDatabaseStateReady);
   ISDBView *view

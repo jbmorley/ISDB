@@ -22,7 +22,7 @@
 
 #import <Foundation/Foundation.h>
 #import "FMDatabase.h"
-#import "ISDBViewDataSource.h"
+#import "ISDBDataSource.h"
 
 // TODO Assert that we're running on the main thread.
 
@@ -56,7 +56,7 @@ entryInserted:(NSNumber *)index;
 
 - (id) initWithDispatchQueue:(dispatch_queue_t)queue
                     database:(FMDatabase *)database
-                  dataSource:(id<ISDBViewDataSource>)dataSource;
+                  dataSource:(id<ISDBDataSource>)dataSource;
 
 // Invalidate the view and wait for a lazy update.
 - (void)invalidate;

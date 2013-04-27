@@ -44,7 +44,7 @@ typedef enum {
 
 @property (nonatomic) ISDBViewState state;
 @property (strong, nonatomic) FMDatabase *database;
-@property (strong, nonatomic) id<ISDBViewDataSource> dataSource;
+@property (strong, nonatomic) id<ISDBDataSource> dataSource;
 @property (strong, nonatomic) NSArray *entries;
 @property (strong, nonatomic) NSMutableDictionary *entriesByIdentifier;
 @property (strong, nonatomic) ISNotifier *notifier;
@@ -62,7 +62,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 
 - (id) initWithDispatchQueue:(dispatch_queue_t)dispatchQueue
                     database:(FMDatabase *)database
-                  dataSource:(id<ISDBViewDataSource>)dataSource
+                  dataSource:(id<ISDBDataSource>)dataSource
 {
   self = [super init];
   if (self) {

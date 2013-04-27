@@ -7,13 +7,13 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "ISDBViewDataSource.h"
+#import "ISDBDataSource.h"
 
 typedef NSArray *(^ISDBEntriesBlock)(FMDatabase *database);
 typedef NSDictionary *(^ISDBEntryBlock)(FMDatabase *database, id identifier);
 
 // TODO Rename this.
-@interface ISDBBlockViewDataSource : NSObject <ISDBViewDataSource>
+@interface ISDBBlockViewDataSource : NSObject <ISDBDataSource>
 
 + (id)dataSourceWithEntriesBlock:(ISDBEntriesBlock)entriesBlock
                       entryBlock:(ISDBEntryBlock)entryBlock;
