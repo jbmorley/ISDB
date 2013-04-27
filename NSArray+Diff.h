@@ -41,6 +41,5 @@
 @interface NSArray (Diff)
 
 - (NSArrayDiff *)diff:(NSArray *)array;
-- (NSArrayDiff *)diffSimple:(NSArray *)array;
 
 @end
