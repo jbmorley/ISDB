@@ -26,12 +26,14 @@
 
 @property (strong, nonatomic, readonly) NSArray *additions;
 @property (strong, nonatomic, readonly) NSArray *removals;
+@property (strong, nonatomic, readonly) NSArray *moves;
 
-+ (NSArrayDiff *)diffWithAdditions:(NSArray *)additions
-                          removals:(NSArray *)removals;
-
++ (id)diffWithAdditions:(NSArray *)additions
+               removals:(NSArray *)removals
+                  moves:(NSArray *)moves;
 - (id)initWithAdditions:(NSArray *)additions
-               removals:(NSArray *)removals;
+               removals:(NSArray *)removals
+                  moves:(NSArray *)moves;
 
 @end
 
@@ -39,5 +41,6 @@
 @interface NSArray (Diff)
 
 - (NSArrayDiff *)diff:(NSArray *)array;
+- (NSArrayDiff *)diffSimple:(NSArray *)array;
 
 @end

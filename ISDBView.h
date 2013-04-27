@@ -54,8 +54,9 @@ entryInserted:(NSNumber *)index;
 @property (nonatomic, readonly) NSUInteger count;
 - (void)countCompletion:(void (^)(NSUInteger))completionBlock;
 
-- (id) initWithDatabase:(FMDatabase *)database
-             dataSource:(id<ISDBViewDataSource>)dataSource;
+- (id) initWithDispatchQueue:(dispatch_queue_t)queue
+                    database:(FMDatabase *)database
+                  dataSource:(id<ISDBViewDataSource>)dataSource;
 
 // Invalidate the view and wait for a lazy update.
 - (void)invalidate;

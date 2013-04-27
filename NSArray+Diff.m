@@ -30,20 +30,24 @@ typedef enum {
 
 @implementation NSArrayDiff
 
-+ (NSArrayDiff *)diffWithAdditions:(NSArray *)additions
-                          removals:(NSArray *)removals
++ (id)diffWithAdditions:(NSArray *)additions
+               removals:(NSArray *)removals
+                  moves:(NSArray *)moves
 {
-  return [[NSArrayDiff alloc] initWithAdditions:additions
-                                       removals:removals];
+  return [[self alloc] initWithAdditions:additions
+                                removals:removals
+                                   moves:moves];
 }
 
 - (id)initWithAdditions:(NSArray *)additions
                removals:(NSArray *)removals
+                  moves:(NSArray *)moves
 {
   self = [super init];
   if (self) {
     _additions = additions;
     _removals = removals;
+    _moves = moves;
   }
   return self;
 }
@@ -100,6 +104,40 @@ typedef enum {
 @implementation NSArray (Diff)
 
 
+- (NSArrayDiff *)diffSimple:(NSArray *)array
+{
+  NSMutableArray *additions = [NSMutableArray arrayWithCapacity:3];
+  NSMutableArray *removals = [NSMutableArray arrayWithCapacity:3];
+  NSMutableArray *moves = [NSMutableArray arrayWithCapacity:3];
+  
+  // Removals and moves.
+  NSMutableIndexSet *found = [[NSMutableIndexSet alloc] init];
+  for (NSUInteger i = 0; i < self.count; i++) {
+    NSUInteger j = [array indexOfObject:self[i]];
+    if (j == NSNotFound) {
+      [removals addObject:[NSNumber numberWithInteger:i]];
+    } else if (j != i) {
+      [moves addObject:@[[NSNumber numberWithInteger:i], [NSNumber numberWithInteger:j]]];
+      [found addIndex:i];
+    } else {
+      [found addIndex:i];
+    }
+  }
+  
+  // Additions.
+  NSMutableArray *other = [NSMutableArray arrayWithArray:array];
+  [other removeObjectsAtIndexes:found];
+  for (id object in other) {
+    NSUInteger i = [array indexOfObject:object];
+    [additions addObject:[NSNumber numberWithInteger:i]];
+  }
+  
+  return [NSArrayDiff diffWithAdditions:additions
+                               removals:removals
+                                  moves:moves];
+}
+
+
 - (NSArrayDiff *)diff:(NSArray *)array
 {
   NSMutableDictionary *dictionary
@@ -147,7 +185,8 @@ typedef enum {
   } while ((index > -1) || (indexOther > -1));
   
   NSArrayDiff *diff = [NSArrayDiff diffWithAdditions:additions
-                                            removals:removals];
+                                            removals:removals
+                                               moves:@[]];
   return diff;
 }
 
@@ -158,6 +197,7 @@ typedef enum {
                                    length:(NSUInteger)lengthB
                                     cache:(NSMutableDictionary *)cache
 {
+  NSLog(@"longestCommonSequenceBetween: length:%d and: length:%d", lengthA, lengthB);
   
   NSUInteger indexA = lengthA - 1;
   NSUInteger indexB = lengthB - 1;
@@ -179,6 +219,7 @@ typedef enum {
     // Special case incase we find ourselves here.
     // TODO Consider whether this is necessary.
     return 0;
+    
   } else if ([a[indexA] isEqual:b[indexB]]) {
     // If the two items are equal, then we need to determine the next
     // direction. This is done simply by evaluating the directions we

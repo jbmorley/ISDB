@@ -24,6 +24,8 @@
 #import "ISNotifier.h"
 #import "NSArray+Diff.h"
 
+#define DISPATCH_QUEUE
+
 typedef enum {
   ISDBViewStateInvalid,
   ISDBViewStateCount,
@@ -38,6 +40,7 @@ typedef enum {
 @property (strong, nonatomic) NSArray *entries;
 @property (strong, nonatomic) NSMutableDictionary *entriesByIdentifier;
 @property (strong, nonatomic) ISNotifier *notifier;
+@property (nonatomic) dispatch_queue_t dispatchQueue;
 
 - (void) update;
 @end
@@ -49,11 +52,13 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 
 @implementation ISDBView
 
-- (id) initWithDatabase:(FMDatabase *)database
-             dataSource:(id<ISDBViewDataSource>)dataSource
+- (id) initWithDispatchQueue:(dispatch_queue_t)dispatchQueue
+                    database:(FMDatabase *)database
+                  dataSource:(id<ISDBViewDataSource>)dataSource
 {
   self = [super init];
   if (self) {
+    self.dispatchQueue = dispatchQueue;
     self.database = database;
     self.dataSource = dataSource;
     self.state = ISDBViewStateInvalid;
@@ -86,45 +91,67 @@ static NSString *const kSQLiteTypeInteger = @"integer";
   if (self.state != ISDBViewStateValid) {
     self.state = ISDBViewStateValid;
     
+    // Fetch the updated entries.
     NSArray *updatedEntries = [self.dataSource database:self.database
                                        entriesForOffset:0
                                                   limit:-1];
     
-    // Compare the two arrays making the changes...
-    if (self.entries != nil) {
-      NSLog(@"Calculating diff...");
-      
-      NSArrayDiff *diff = [self.entries diff:updatedEntries];
-      
-      NSLog(@"Diff complete...");
-      
-      [self.notifier notify:@selector(viewBeginUpdates:)
-                 withObject:self];
-      
-      // Assign the new entries.
+    if (self.entries == nil) {
+    
+      // When initially updating the view it is not necessary to
+      // perform a comparison.  We therefore update the entries
+      // immediately.
       self.entries = updatedEntries;
-      
-      for (NSNumber *index in diff.removals) {
-        NSLog(@"Remove: %@", index);
-        [self.notifier notify:@selector(view:entryDeleted:)
-                   withObject:self
-                   withObject:index];
-      }
-      for (NSNumber *index in diff.additions) {
-        NSLog(@"Add: %@", index);
-        [self.notifier notify:@selector(view:entryInserted:)
-                   withObject:self
-                   withObject:index];
-      }
-      [self.notifier notify:@selector(viewEndUpdates:)
-                 withObject:self];
       
     } else {
       
-      // Then assign the new array.
-      self.entries = updatedEntries;
+      // Perform the comparison on a different thread to ensure we do
+      // not block the UI thread.  Since we are always dispatching updates
+      // onto a common queue we can guarantee that updates are performed in
+      // order (though they may be delayed).
+      // Updates are cross-posted back to the main thread.
+#ifdef DISPATCH_QUEUE
+      dispatch_async(self.dispatchQueue, ^{
+#endif
       
+        NSLog(@"Update: Begin diff");
+        NSArrayDiff *diff = [self.entries diffSimple:updatedEntries];
+        NSLog(@"Update: End diff");
+        
+        // Notify our observers.
+#ifdef DISPATCH_QUEUE
+        dispatch_sync(dispatch_get_main_queue(), ^{
+#endif
+          [self.notifier notify:@selector(viewBeginUpdates:)
+                     withObject:self];
+          
+          self.entries = updatedEntries;
+          
+          for (NSArray *move in diff.moves) {
+            [self.notifier notify:@selector(view:entryMoved:)
+                       withObject:self
+                       withObject:move];
+          }
+          for (NSNumber *index in diff.removals) {
+            [self.notifier notify:@selector(view:entryDeleted:)
+                       withObject:self
+                       withObject:index];
+          }
+          for (NSNumber *index in diff.additions) {
+            [self.notifier notify:@selector(view:entryInserted:)
+                       withObject:self
+                       withObject:index];
+          }
+          [self.notifier notify:@selector(viewEndUpdates:)
+                     withObject:self];
+
+#ifdef DISPATCH_QUEUE
+        });
+      });
+#endif
+    
     }
+    
   }
 }
 

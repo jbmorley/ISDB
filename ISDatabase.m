@@ -39,6 +39,7 @@
 @property (nonatomic, readonly) NSUInteger version;
 @property (nonatomic, readonly) NSUInteger currentVersion;
 @property (strong, nonatomic) ISWeakReferenceArray *views;
+@property (nonatomic) dispatch_queue_t dispatchQueue;
 
 @end
 
@@ -73,6 +74,8 @@ static NSString *ColumnNameVersion = @"version";
     self.state = ISDatabaseStateClosed;
     self.provider = provider;
     self.views = [ISWeakReferenceArray arrayWithCapacity:3];
+    self.dispatchQueue = dispatch_queue_create("uk.co.inseven.database",
+                                               NULL);
   }
   return self;
 }
@@ -304,8 +307,10 @@ static NSString *ColumnNameVersion = @"version";
 - (ISDBView *)viewWithDataSource:(id<ISDBViewDataSource>)dataSource
 {
   assert(self.state == ISDatabaseStateReady);
-  ISDBView *view = [[ISDBView alloc] initWithDatabase:self.database
-                                           dataSource:dataSource];
+  ISDBView *view
+    = [[ISDBView alloc] initWithDispatchQueue:self.dispatchQueue
+                                     database:self.database
+                                   dataSource:dataSource];
   [self.views addObject:view];
   return view;
 }
