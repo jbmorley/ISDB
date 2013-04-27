@@ -20,13 +20,13 @@
 // SOFTWARE.
 //
 
-#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 #import "ISDBDataSource.h"
 
-@interface ISDBTableViewDataSource : NSObject <ISDBDataSource>
+@interface ISDBQueryDataSource : NSObject <ISDBDataSource>
 
-- (id)initWithTable:(NSString *)table
-         identifier:(NSString *)identifier
-            orderBy:(NSString *)orderBy;
+- (id)initWithEntriesQuery:(NSString *)entriesQuery
+                entryQuery:(NSString *)entryQuery
+                identifier:(NSString *)identifier;
 
 @end

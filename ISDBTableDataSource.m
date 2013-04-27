@@ -20,9 +20,9 @@
 // SOFTWARE.
 //
 
-#import "ISDBTableViewDataSource.h"
+#import "ISDBTableDataSource.h"
 
-@interface ISDBTableViewDataSource ()
+@interface ISDBTableDataSource ()
 
 @property (strong, nonatomic) NSString *table;
 @property (strong, nonatomic) NSString *identifier;
@@ -32,7 +32,7 @@
 
 @end
 
-@implementation ISDBTableViewDataSource
+@implementation ISDBTableDataSource
 
 
 - (id)initWithTable:(NSString *)table

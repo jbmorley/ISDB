@@ -6,16 +6,16 @@
 //
 //
 
-#import "ISDBBlockViewDataSource.h"
+#import "ISDBBlockDataSource.h"
 
-@interface ISDBBlockViewDataSource ()
+@interface ISDBBlockDataSource ()
 
 @property (strong, nonatomic) ISDBEntriesBlock entriesBlock;
 @property (strong, nonatomic) ISDBEntryBlock entryBlock;
 
 @end
 
-@implementation ISDBBlockViewDataSource
+@implementation ISDBBlockDataSource
 
 + (id)dataSourceWithEntriesBlock:(ISDBEntriesBlock)entriesBlock
                       entryBlock:(ISDBEntryBlock)entryBlock

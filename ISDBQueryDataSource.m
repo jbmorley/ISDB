@@ -20,9 +20,9 @@
 // SOFTWARE.
 //
 
-#import "ISDBQueryViewDataSource.h"
+#import "ISDBQueryDataSource.h"
 
-@interface ISDBQueryViewDataSource ()
+@interface ISDBQueryDataSource ()
 
 @property (strong, nonatomic) NSString *entriesQuery;
 @property (strong, nonatomic) NSString *entryQuery;
@@ -30,7 +30,7 @@
 
 @end
 
-@implementation ISDBQueryViewDataSource
+@implementation ISDBQueryDataSource
 
 
 - (id)initWithEntriesQuery:(NSString *)entriesQuery

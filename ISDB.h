@@ -8,6 +8,6 @@
 
 #import "ISDatabase.h"
 
-#import "ISDBTableViewDataSource.h"
-#import "ISDBQueryViewDataSource.h"
-#import "ISDBBlockViewDataSource.h"
+#import "ISDBTableDataSource.h"
+#import "ISDBQueryDataSource.h"
+#import "ISDBBlockDataSource.h"
