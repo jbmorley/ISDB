@@ -239,7 +239,6 @@ static NSString *ColumnNameVersion = @"version";
 
 - (void)databaseDidUpdate
 {
-  NSLog(@"databaseDidUpdate");
   for (ISDBView *view in self.views) {
     [view reload];
   }

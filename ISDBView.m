@@ -99,9 +99,11 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.state = ISDBViewStateValid;
     
     // Fetch the updated entries.
+    BEGIN_TIME
     NSArray *updatedEntries = [self.dataSource database:self.database
                                        entriesForOffset:0
                                                   limit:-1];
+    END_TIME(@"Update")
     
     if (self.entries == nil) {
     
@@ -123,7 +125,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       
         BEGIN_TIME;
         NSArrayDiff *diff = [self.entries diff:updatedEntries];
-        END_TIME(@"Update");
+        END_TIME(@"Compare");
         
         // Notify our observers.
 #ifdef DISPATCH_QUEUE
