@@ -100,6 +100,10 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       
       [self.notifier notify:@selector(viewBeginUpdates:)
                  withObject:self];
+      
+      // Assign the new entries.
+      self.entries = updatedEntries;
+      
       for (NSNumber *index in diff.removals) {
         NSLog(@"Remove: %@", index);
         [self.notifier notify:@selector(view:entryDeleted:)
@@ -114,9 +118,6 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       }
       [self.notifier notify:@selector(viewEndUpdates:)
                  withObject:self];
-      
-      // Then assign the new array.
-      self.entries = updatedEntries;
       
     } else {
       

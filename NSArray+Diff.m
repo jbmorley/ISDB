@@ -26,7 +26,7 @@ typedef enum {
   NSArrayDiffDirectionA,
   NSArrayDiffDirectionB,
   NSArrayDiffDirectionAB,
-} NSSArrayDiffDirection;
+} NSArrayDiffDirection;
 
 @implementation NSArrayDiff
 
@@ -57,6 +57,42 @@ typedef enum {
           [self.removals componentsJoinedByString:@", "]];
 }
 
+
+@end
+
+
+@interface NSArrayComparisonItem : NSObject
+
+@property (nonatomic) NSArrayDiffDirection direction;
+@property (nonatomic) NSUInteger length;
+
++ (id)itemWithDirection:(NSArrayDiffDirection)direction
+                 length:(NSUInteger)length;
+- (id)initWithDirection:(NSArrayDiffDirection)direction
+                 length:(NSUInteger)length;
+
+@end
+
+
+@implementation NSArrayComparisonItem
+
++ (id)itemWithDirection:(NSArrayDiffDirection)direction
+                 length:(NSUInteger)length
+{
+  return [[self alloc] initWithDirection:direction
+                                  length:length];
+}
+
+- (id)initWithDirection:(NSArrayDiffDirection)direction
+                 length:(NSUInteger)length
+{
+  self = [super init];
+  if (self) {
+    self.direction = direction;
+    self.length = length;
+  }
+  return self;
+}
 
 @end
 
@@ -97,14 +133,13 @@ typedef enum {
       // Along the pre-stored results in the table.
       NSString *identifier
         = [NSString stringWithFormat:@"%d:%d", index, indexOther];
-      NSUInteger direction
-        = [[dictionary objectForKey:identifier] integerValue];
-      if (direction == NSArrayDiffDirectionAB) {
+      NSArrayComparisonItem *item = [dictionary objectForKey:identifier];
+      if (item.direction == NSArrayDiffDirectionAB) {
         index--; indexOther--;
-      } else if (direction == NSArrayDiffDirectionA) {
+      } else if (item.direction == NSArrayDiffDirectionA) {
         [removals addObject:[NSNumber numberWithInteger:index]];
         index--;
-      } else if (direction == NSArrayDiffDirectionB) {
+      } else if (item.direction == NSArrayDiffDirectionB) {
         [additions addObject:[NSNumber numberWithInteger:indexOther]];
         indexOther--;
       }
@@ -129,6 +164,13 @@ typedef enum {
   NSString *identifier
     = [NSString stringWithFormat:@"%d:%d", indexA, indexB];
   
+  NSArrayComparisonItem *item = [cache objectForKey:identifier];
+  if (item != nil) {
+    return item.length;
+  } else {
+    item = [[NSArrayComparisonItem alloc] init];
+  }
+  
   // TODO Check the cache for a result.
   // TODO We need to store the score in the cache to make it effective.
   
@@ -143,37 +185,52 @@ typedef enum {
     // can take. Note that we always mark matching entires with
     // kDirectionAB. The actual direction can be inferred.
     if (lengthA == 1 || lengthB == 1) {
-      [cache setObject:[NSNumber numberWithInteger:NSArrayDiffDirectionAB]
+      
+      item.length = 1;
+      item.direction = NSArrayDiffDirectionAB;
+      [cache setObject:item
                 forKey:identifier];
-      return 1;
+      
+      return item.length;
+      
     } else {
-      [cache setObject:[NSNumber numberWithInteger:NSArrayDiffDirectionAB]
+      
+      item.length = 1 + [self longestCommonSequenceBetween:a
+                                                    length:lengthA - 1
+                                                       and:b
+                                                    length:lengthB - 1
+                                                     cache:cache];
+      item.direction = NSArrayDiffDirectionAB;
+      [cache setObject:item
                 forKey:identifier];
-      return [self longestCommonSequenceBetween:a
-                                         length:lengthA-1
-                                            and:b
-                                         length:lengthB-1
-                                          cache:cache];
+      
+      return item.length;
+      
     }
   } else {
     // Explore the two diagonals.
     NSUInteger longestA = [self longestCommonSequenceBetween:a
-                                                      length:lengthA-1
+                                                      length:lengthA - 1
                                                          and:b
                                                       length:lengthB
                                                        cache:cache];
     NSUInteger longestB = [self longestCommonSequenceBetween:a
                                                       length:lengthA
                                                          and:b
-                                                      length:lengthB-1
+                                                      length:lengthB - 1
                                                        cache:cache];
     if (longestA > longestB) {
-      [cache setObject:[NSNumber numberWithInteger:NSArrayDiffDirectionA]
+      item.length = longestA;
+      item.direction = NSArrayDiffDirectionA;
+      [cache setObject:item
                 forKey:identifier];
-      return longestA;
+      return item.length;
     } else {
-      [cache setObject:[NSNumber numberWithInteger:NSArrayDiffDirectionB]
+      item.length = longestB;
+      item.direction = NSArrayDiffDirectionB;
+      [cache setObject:item
                 forKey:identifier];
+      return item.length;
     }
     
   }
