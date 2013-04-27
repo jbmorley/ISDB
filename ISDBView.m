@@ -49,51 +49,6 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 
 @implementation ISDBView
 
-// TODO Consider whether we should support auto incrmenting to be set here.
-// Can we infer this from SQLite database?
-
-// TODO Database change feed that all views submit to on changes.
-
-// TODO Consider an editable view.
-
-// TODO Consider whether we wish to cache the row height on behalf of the client.
-
-// TODO Would a pure diff solution work?
-// Can I do the diff with a stored procedure?
-// Index of order by :).
-// Only pull the IDs
-// TODO Time the select order by.  If this is quick, then we're home and dry :).
-// TODO Consider 'transactional' updates to avoid noisy updates.
-// We should version all rows / timestamp rows?
-
-// For variable row height, is it worth storing a CRC or similar for the rowheight row?  You could generate this on an update trigger.
-
-// E.g. Always have row_height_hint view in your column?
-
-// TODO Remember we need to use views more.
-
-// Row height is actually a content change indicator.
-// N.B. This obviates the need for content change.
-
-// Helpers for calculating a hash?  Triggers for hash?  Boolean for use hash.
-
-
-// Returns the identifiers and rows.
-//- (NSArray *)rows; // IDs and hints
-//- (NSArray *)rowsForOffset:(NSUInteger)offset
-//                     limit:(NSUInteger)limit; // -1 for all rows.
-// N.B. If a view has no active observer, we can simply ignore updates
-// and perform them lazily.
-// All updates go via ISDatabase which simply pokes the views.
-
-// Some helper methods for simple table views.
-// Potentially a simple adapter for a single view.
-
-
-
-
-// @param identifier Field must be of type auto-incrementing integer.
-// @param orderBy Field must be of type string.
 - (id) initWithDatabase:(FMDatabase *)database
              dataSource:(id<ISDBViewDataSource>)dataSource
 {
@@ -103,15 +58,6 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.dataSource = dataSource;
     self.state = ISDBViewStateInvalid;
     self.notifier = [ISNotifier new];
-    
-//    NSArrayDiff *diff = nil;
-//    diff = [@[@"C", @"A", @"B", @"B", @"A"] diff:@[@"C", @"A", @"B", @"B", @"A"]];
-//    NSLog(@"%@", diff);
-//    diff = [@[@"B", @"A", @"N", @"A", @"N", @"A"] diff:@[@"A", @"T", @"A", @"N", @"A"]];
-//    NSLog(@"%@", diff);
-//    diff = [@[@"T", @"A", @"N"] diff:@[@"F", @"A", @"N"]];
-//    NSLog(@"%@", diff);
-    
   }
   return self;
 }
