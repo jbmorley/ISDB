@@ -24,6 +24,13 @@
 #import "ISNotifier.h"
 #import "NSArray+Diff.h"
 
+#define BEGIN_TIME \
+  NSDate *start = [NSDate date];
+#define END_TIME(a) \
+  NSTimeInterval seconds = [start timeIntervalSinceNow] * -1; \
+  NSLog(@"%@ (%02f)", a, seconds);
+
+
 #define DISPATCH_QUEUE
 
 typedef enum {
@@ -114,9 +121,9 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       dispatch_async(self.dispatchQueue, ^{
 #endif
       
-        NSLog(@"Update: Begin diff");
-        NSArrayDiff *diff = [self.entries diffSimple:updatedEntries];
-        NSLog(@"Update: End diff");
+        BEGIN_TIME;
+        NSArrayDiff *diff = [self.entries diff:updatedEntries];
+        END_TIME(@"Update");
         
         // Notify our observers.
 #ifdef DISPATCH_QUEUE
