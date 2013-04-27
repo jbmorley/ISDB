@@ -13,9 +13,11 @@
 
 @property (weak, nonatomic) id target;
 @property (nonatomic) SEL selector;
+@property (nonatomic) BOOL pending;
 
 - (id)initWithTarget:(id)target
             selector:(SEL)selector;
+- (void)fireOnce;
 
 @end
 
@@ -29,8 +31,32 @@
   if (self) {
     self.target = target;
     self.selector = selector;
+    self.pending = NO;
   }
   return self;
+}
+
+- (void)fireOnce
+{
+  @synchronized(self) {
+    if (!self.pending) {
+      self.pending = YES;
+      dispatch_async(dispatch_get_main_queue(), ^{
+        [self didFire];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+        [self.target performSelector:self.selector];
+#pragma clang diagnostic pop
+      });
+    }
+  }
+}
+
+- (void)didFire
+{
+  @synchronized(self) {
+    self.pending = NO;
+  }
 }
 
 @end
@@ -53,9 +79,7 @@ void onUpdate(void *context,
   // any further modifications to the database at this point, so we
   // schedule the callback selector on the main thread, rather than
   // attempting to act on it directly.
-  [callback.target performSelectorOnMainThread:callback.selector
-                                    withObject:nil
-                                 waitUntilDone:NO];
+  [callback fireOnce];
 }
 
 - (void)update:(id)target
