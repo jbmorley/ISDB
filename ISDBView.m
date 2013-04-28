@@ -125,7 +125,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 #endif
       
         BEGIN_TIME;
-        NSArrayDiff *diff = [self.entries diff:updatedEntries];
+        NSArray *diff = [self.entries diff:updatedEntries];
         END_TIME(@"Compare");
         
         // Notify our observers.
@@ -137,21 +137,23 @@ static NSString *const kSQLiteTypeInteger = @"integer";
           
           self.entries = updatedEntries;
           
-          for (NSArray *move in diff.moves) {
-            [self.notifier notify:@selector(view:entryMoved:)
-                       withObject:self
-                       withObject:move];
+          for (NSArrayOperation *operation in diff) {
+
+            if (operation.type == NSArrayOperationRemove) {
+              [self.notifier notify:@selector(view:entryDeleted:)
+                         withObject:self
+                         withObject:[NSNumber numberWithInteger:operation.index]];
+            } else if (operation.type == NSArrayOperationInsert) {
+              [self.notifier notify:@selector(view:entryInserted:)
+                         withObject:self
+                         withObject:[NSNumber numberWithInteger:operation.index]];
+            }
+
+            //[self.notifier notify:@selector(view:entryMoved:)
+            //           withObject:self
+            //           withObject:move];
           }
-          for (NSNumber *index in diff.removals) {
-            [self.notifier notify:@selector(view:entryDeleted:)
-                       withObject:self
-                       withObject:index];
-          }
-          for (NSNumber *index in diff.additions) {
-            [self.notifier notify:@selector(view:entryInserted:)
-                       withObject:self
-                       withObject:index];
-          }
+          
           [self.notifier notify:@selector(viewEndUpdates:)
                      withObject:self];
 

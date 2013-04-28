@@ -21,92 +21,146 @@
 //
 
 #import "NSArray+Diff.h"
+#import "ISComparisonTable.h"
+#import "ISComparisonItem.h"
+#import "ISComparisonSequence.h"
+#import "ISComparisonMaskedArray.h"
+
 
 typedef enum {
-  NSArrayDiffDirectionA,
-  NSArrayDiffDirectionB,
-  NSArrayDiffDirectionAB,
-} NSArrayDiffDirection;
-
-@implementation NSArrayDiff
-
-+ (id)diffWithAdditions:(NSArray *)additions
-               removals:(NSArray *)removals
-                  moves:(NSArray *)moves
-{
-  return [[self alloc] initWithAdditions:additions
-                                removals:removals
-                                   moves:moves];
-}
-
-- (id)initWithAdditions:(NSArray *)additions
-               removals:(NSArray *)removals
-                  moves:(NSArray *)moves
-{
-  self = [super init];
-  if (self) {
-    _additions = additions;
-    _removals = removals;
-    _moves = moves;
-  }
-  return self;
-}
-
-
-- (NSString *)description
-{
-  return [NSString stringWithFormat:
-          @"Additions: [%@], Removals: [%@], Moves: [%@]",
-          [self.additions componentsJoinedByString:@", "],
-          [self.removals componentsJoinedByString:@", "],
-          [self.moves componentsJoinedByString:@", "]];
-}
-
-
-@end
+  ISComparisonScannerStateSearching,
+  ISComparisonScannerStateFound,
+} ISComparisonScannerState;
 
 
 @implementation NSArray (Diff)
 
-
-- (NSArrayDiff *)diff:(NSArray *)array
+- (NSArray *)diff:(NSArray *)other
 {
-  NSMutableArray *additions = [NSMutableArray arrayWithCapacity:3];
-  NSMutableArray *removals = [NSMutableArray arrayWithCapacity:3];
-  NSMutableArray *moves = [NSMutableArray arrayWithCapacity:3];
+  NSArray *commonSequences = [self commonSequences:other];
   
-  // Removals and moves.
-  NSMutableIndexSet *found = [[NSMutableIndexSet alloc] init];
-  for (NSUInteger i = 0; i < self.count; i++) {
-    NSUInteger j = [array indexOfObject:self[i]];
-    if (j == NSNotFound) {
-      [removals addObject:[NSNumber numberWithInteger:i]];
-    } else if (j != i) {
-      [moves addObject:@[[NSNumber numberWithInteger:i], [NSNumber numberWithInteger:j]]];
-      [found addIndex:i];
-    } else {
-      [found addIndex:i];
+  ISComparisonMaskedArray *maskedSelf = [[ISComparisonMaskedArray alloc] initWithArray:self];
+  ISComparisonMaskedArray *maskedOther = [[ISComparisonMaskedArray alloc] initWithArray:other];
+  for (ISComparisonSequence *sequence in commonSequences) {
+    [maskedSelf addMask:[ISComparisonMask maskWithLocation:sequence.startX
+                                                    length:sequence.lenghtX]];
+    [maskedOther addMask:[ISComparisonMask maskWithLocation:sequence.startY
+                                                     length:sequence.lenghtY]];
+  }
+
+  // TODO We can make this a little more efficient.
+
+  // We ignore moves at the moment - these seem somewhat troublesome as it
+  // is difficult to know which index we should be moving them to as it is
+  // affected by the other items.
+  NSMutableArray *changes = [NSMutableArray arrayWithCapacity:3];
+  
+  // Remove all uncommon elements from masked self, recording the
+  // unadjusted index as we do (additions).
+  while (maskedSelf.adjustedCount > 0) {
+    id object = [maskedSelf objectAtAdjustedIndex:0];
+    NSUInteger index = [maskedSelf indexOfObject:object];
+    [maskedSelf removeObjectAtIndex:index];
+    [changes addObject:[NSArrayOperation operationWithType:NSArrayOperationRemove index:index object:object]];
+  }
+  
+  // Remove all the uncommon elements from masked other, recording the
+  // unadjusted index as we do (removals).
+  // We reverse the array of additions to adjust for the affects adding
+  // items has to the index.
+  NSMutableArray *additions = [NSMutableArray arrayWithCapacity:maskedOther.adjustedCount];
+  while (maskedOther.adjustedCount > 0) {
+    id object = [maskedOther objectAtAdjustedIndex:0];
+    NSUInteger index = [maskedOther indexOfObject:object];
+    [maskedOther removeObjectAtIndex:index];
+    [additions addObject:[NSArrayOperation operationWithType:NSArrayOperationInsert index:index object:object]];
+  }
+  
+  [changes addObjectsFromArray:[[additions reverseObjectEnumerator] allObjects]];
+  
+  return changes;
+}
+
+
+- (NSArray *)commonSequences:(NSArray *)other
+{
+  ISComparisonTable *table = [self comparisonTable:other];
+  
+  NSMutableArray *results = [NSMutableArray arrayWithCapacity:3];
+  ISComparisonScannerState state = ISComparisonScannerStateSearching;
+  ISComparisonSequence *sequence = nil;
+  
+  NSInteger x = self.count-1; NSInteger y = other.count-1;
+  while (x >= 0 && y >= 0) {
+    ISComparisonItem *item = [table objectForLocation:ISLocationMake(x, y)];
+    if (item.direction == ISComparisonDirectionXY) {
+      
+      // Store the details in a sequence.
+      if (state == ISComparisonScannerStateSearching) {
+        state = ISComparisonScannerStateFound;
+        // Create a new sequence.
+        sequence = [ISComparisonSequence new];
+        [results addObject:sequence];
+        sequence.startX = x;
+        sequence.startY = y;
+        sequence.endX = x;
+        sequence.endY = y;
+      } else {
+        // Update the existing sequence.
+        sequence.startX = x;
+        sequence.startY = y;
+      }
+      
+      x--; y--;
+    } else if (item.direction == ISComparisonDirectionX) {
+      state = ISComparisonScannerStateSearching;
+      x--;
+    } else if (item.direction == ISComparisonDirectionY) {
+      state = ISComparisonScannerStateSearching;
+      y--;
+    }
+  }
+
+  return results;
+}
+
+
+// This implementation generates the complete table to avoid deep recursion.
+// It is therefore guaranteed to use NM time.
+- (ISComparisonTable *)comparisonTable:(NSArray *)other;
+{
+  ISComparisonTable *table
+  = [[ISComparisonTable alloc] initWithWidth:self.count
+                                      height:other.count
+                               defaultObject:[ISComparisonItem new]];
+  
+  for (NSUInteger y = 0; y < other.count; y++) {
+    for (NSUInteger x = 0; x < self.count; x++) {
+      
+      ISComparisonItem *item = [ISComparisonItem new];
+      
+      if ([self[x] isEqual:other[y]]) {
+        item.length = ((ISComparisonItem *)[table objectForLocation:ISLocationMake(x-1, y-1)]).length + 1;
+        item.direction = ISComparisonDirectionXY;
+      } else {
+        NSUInteger lengthX = ((ISComparisonItem *)[table objectForLocation:ISLocationMake(x-1, y)]).length;
+        NSUInteger lengthY = ((ISComparisonItem *)[table objectForLocation:ISLocationMake(x, y-1)]).length;
+        if (lengthX > lengthY) {
+          item.length = lengthX;
+          item.direction = ISComparisonDirectionX;
+        } else {
+          item.length = lengthY;
+          item.direction = ISComparisonDirectionY;
+        }
+      }
+    
+      [table setObject:item
+           forLocation:ISLocationMake(x, y)];
+    
     }
   }
   
-  // Additions.
-  NSMutableArray *other = [NSMutableArray arrayWithArray:array];
-  [other removeObjectsAtIndexes:found];
-  for (id object in other) {
-    NSUInteger i = [array indexOfObject:object];
-    [additions addObject:[NSNumber numberWithInteger:i]];
-  }
-  
-  // Sanity check.
-  assert(self.count - removals.count + additions.count == array.count);
-  
-  NSArrayDiff *diff = [NSArrayDiff diffWithAdditions:additions
-                                            removals:removals
-                                               moves:moves];
-  NSLog(@"Diff: %@", diff);
-  
-  return diff;
+  return table;
 }
-
 
 @end

@@ -21,25 +21,10 @@
 //
 
 #import <Foundation/Foundation.h>
-
-@interface NSArrayDiff : NSObject
-
-@property (strong, nonatomic, readonly) NSArray *additions;
-@property (strong, nonatomic, readonly) NSArray *removals;
-@property (strong, nonatomic, readonly) NSArray *moves;
-
-+ (id)diffWithAdditions:(NSArray *)additions
-               removals:(NSArray *)removals
-                  moves:(NSArray *)moves;
-- (id)initWithAdditions:(NSArray *)additions
-               removals:(NSArray *)removals
-                  moves:(NSArray *)moves;
-
-@end
-
+#import "NSArrayOperation.h"
 
 @interface NSArray (Diff)
 
-- (NSArrayDiff *)diff:(NSArray *)array;
+- (NSArray *)diff:(NSArray *)other;
 
 @end
