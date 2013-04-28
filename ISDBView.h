@@ -64,24 +64,17 @@ entryInserted:(NSNumber *)index;
 // Invalidate and udpate immediately if there are active observers.
 - (void)reload;
 
-- (NSDictionary *) entryForIndex:(NSInteger)index;
-- (NSDictionary *) entryForIdentifier:(id)identifier;
-
 - (void)entryForIndex:(NSInteger)index
-           completion:(void (^)(NSDictionary *))completionBlock;
+           completion:(void (^)(NSDictionary *entry))completionBlock;
 - (void)entryForIdentifier:(id)identifier
-                completion:(void (^)(NSDictionary *))completionBlock;
-
-- (NSString *)insert:(NSDictionary *)entry;
-- (NSString *)update:(NSDictionary *)entry;
-- (NSString *)delete:(NSDictionary *)entry;
+                completion:(void (^)(NSDictionary *entry))completionBlock;
 
 - (void) insert:(NSDictionary *)entry
-     completion:(void (^)(NSString *))completionBlock;
+     completion:(void (^)(id identifier))completionBlock;
 - (void) update:(NSDictionary *)entry
-     completion:(void (^)(NSString *))completionBlock;
+     completion:(void (^)(id identifier))completionBlock;
 - (void) delete:(NSDictionary *)entry
-     completion:(void (^)(NSString *))completionBlock;
+     completion:(void (^)(id identifier))completionBlock;
 
 - (void) addObserver:(id<ISDBViewObserver>)observer;
 - (void) removeObserver:(id<ISDBViewObserver>)observer;

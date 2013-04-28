@@ -185,19 +185,8 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
-- (NSDictionary *)entryForIdentifier:(id)identifier
-{
-  __block NSDictionary *result = nil;
-  [self entryForIdentifier:identifier
-                completion:^(NSDictionary *entry) {
-                  result = entry;
-                }];
-  return result;
-}
-
-
 - (void)entryForIdentifier:(id)identifier
-                completion:(void (^)(NSDictionary *))completionBlock
+                completion:(void (^)(NSDictionary *entry))completionBlock
 {
   [self executeSynchronouslyOnMainThread:^{
     NSDictionary *entry = [self.dataSource database:self.database
@@ -207,19 +196,8 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
-- (NSDictionary *)entryForIndex:(NSInteger)index
-{
-  __block NSDictionary *result = nil;
-  [self entryForIndex:index
-           completion:^(NSDictionary *entry) {
-             result = entry;
-           }];
-  return result;
-}
-
-
 - (void)entryForIndex:(NSInteger)index
-           completion:(void (^)(NSDictionary *))completionBlock
+           completion:(void (^)(NSDictionary *entry))completionBlock
 {
   [self executeSynchronouslyOnMainThread:^{
     [self update];
@@ -235,17 +213,6 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
-- (NSString *)insert:(NSDictionary *)entry
-{
-  __block NSString *result = nil;
-  [self insert:entry
-    completion:^(NSString *identifier) {
-      result = identifier;
-    }];
-  return result;
-}
-
-
 - (void)executeSynchronouslyOnMainThread:(ISDBTask)task
 {
   if ([[NSThread currentThread] isMainThread]) {
@@ -257,7 +224,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 
 
 - (void)insert:(NSDictionary *)entry
-    completion:(void (^)(NSString *))completionBlock
+    completion:(void (^)(id identifier))completionBlock
 {
   [self executeSynchronouslyOnMainThread:^{
     if ([self.dataSource respondsToSelector:@selector(database:insert:)]) {
@@ -266,7 +233,9 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       if (identifier) {
         [self invalidate];
       }
-      completionBlock(identifier);
+      if (completionBlock != NULL) {
+        completionBlock(identifier);
+      }
     } else {
       // TODO Throw an exception.
     }
@@ -274,19 +243,8 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
-- (NSString *)update:(NSDictionary *)entry
-{
-  __block NSString *result = nil;
-  [self update:entry
-    completion:^(NSString *identifier) {
-      result = identifier;
-    }];
-  return result;
-}
-
-
 - (void) update:(NSDictionary *)entry
-     completion:(void (^)(NSString *))completionBlock
+     completion:(void (^)(id identifier))completionBlock
 {
   [self executeSynchronouslyOnMainThread:^{
     if ([self.dataSource respondsToSelector:@selector(database:update:)]) {
@@ -295,7 +253,9 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       if (identifier) {
         [self invalidate];
       }
-      completionBlock(identifier);
+      if (completionBlock != NULL) {
+        completionBlock(identifier);
+      }
     } else {
       // TODO Throw an exception.
     }
@@ -303,19 +263,8 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
-- (NSString *)delete:(NSDictionary *)entry
-{
-  __block NSString *result = nil;
-  [self delete:entry
-    completion:^(NSString *identifier) {
-      result = identifier;
-    }];
-  return result;
-}
-
-
 - (void)delete:(NSDictionary *)entry
-    completion:(void (^)(NSString *))completionBlock
+    completion:(void (^)(id identifier))completionBlock
 {
   [self executeSynchronouslyOnMainThread:^{
     if ([self.database respondsToSelector:@selector(database:delete:)]) {
@@ -325,7 +274,9 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       if (identifier) {
         [self invalidate];
       }
-      completionBlock(identifier);
+      if (completionBlock != NULL) {
+        completionBlock(identifier);
+      }
     } else {
       // TODO Throw an exception.
     }

@@ -56,9 +56,10 @@ typedef enum {
 - (NSString *)description
 {
   return [NSString stringWithFormat:
-          @"Additions: [%@], Removals: [%@]",
+          @"Additions: [%@], Removals: [%@], Moves: [%@]",
           [self.additions componentsJoinedByString:@", "],
-          [self.removals componentsJoinedByString:@", "]];
+          [self.removals componentsJoinedByString:@", "],
+          [self.moves componentsJoinedByString:@", "]];
 }
 
 
@@ -96,9 +97,15 @@ typedef enum {
     [additions addObject:[NSNumber numberWithInteger:i]];
   }
   
-  return [NSArrayDiff diffWithAdditions:additions
-                               removals:removals
-                                  moves:moves];
+  // Sanity check.
+  assert(self.count - removals.count + additions.count == array.count);
+  
+  NSArrayDiff *diff = [NSArrayDiff diffWithAdditions:additions
+                                            removals:removals
+                                               moves:moves];
+  NSLog(@"Diff: %@", diff);
+  
+  return diff;
 }
 
 
