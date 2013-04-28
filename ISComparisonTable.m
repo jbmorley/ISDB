@@ -38,7 +38,7 @@
 
 - (id)objectForLocation:(ISLocation)location
 {
-  NSString *identifier = [NSString stringWithFormat:@"%ld:%ld", (long)location.x, (long)location.y];
+  NSString *identifier = [self identifierForLocation:location];
   id object = [self.dictionary objectForKey:identifier];
   if (object) {
     return object;
@@ -51,9 +51,18 @@
 - (void)setObject:(id)object
       forLocation:(ISLocation)location
 {
-  NSString *identifier = [NSString stringWithFormat:@"%ld:%ld", (long)location.x, (long)location.y];
+  NSString *identifier = [self identifierForLocation:location];
   [self.dictionary setObject:object
                       forKey:identifier];
+}
+
+
+- (id)identifierForLocation:(ISLocation)location
+{
+  NSUInteger identifier = location.x;
+  identifier <<= 16;
+  identifier |= location.y;
+  return [NSNumber numberWithInteger:identifier];
 }
 
 
