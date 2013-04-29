@@ -30,7 +30,7 @@
     self.height = height;
     self.defaultObject = defaultObject;
     self.dictionary
-    = [NSMutableDictionary dictionaryWithCapacity:width * height];
+    = [NSMutableDictionary dictionaryWithCapacity:3];
   }
   return self;
 }
@@ -38,20 +38,20 @@
 
 - (id)objectForLocation:(ISLocation)location
 {
-  NSString *identifier = [self identifierForLocation:location];
-  id object = [self.dictionary objectForKey:identifier];
-  if (object) {
+  id identifier = [self identifierForLocation:location];
+  if (location.x >= 0 && location.x < self.width &&
+      location.y >= 0 && location.y < self.height) {
+    id object = [self.dictionary objectForKey:identifier];
     return object;
-  } else {
-    return self.defaultObject;
   }
+  return self.defaultObject;
 }
 
 
 - (void)setObject:(id)object
       forLocation:(ISLocation)location
 {
-  NSString *identifier = [self identifierForLocation:location];
+  id identifier = [self identifierForLocation:location];
   [self.dictionary setObject:object
                       forKey:identifier];
 }
@@ -64,6 +64,7 @@
   identifier |= location.y;
   return [NSNumber numberWithInteger:identifier];
 }
+
 
 
 - (NSString *)description
