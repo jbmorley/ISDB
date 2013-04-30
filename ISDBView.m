@@ -31,9 +31,6 @@
   NSTimeInterval seconds = [start timeIntervalSinceNow] * -1; \
   NSLog(@"%@ (%02f)", a, seconds);
 
-
-#define DISPATCH_QUEUE
-
 typedef enum {
   ISDBViewStateInvalid,
   ISDBViewStateCount,
@@ -50,7 +47,6 @@ typedef enum {
 @property (strong, nonatomic) ISNotifier *notifier;
 @property (nonatomic) dispatch_queue_t dispatchQueue;
 
-- (void) update;
 @end
 
 NSInteger ISDBViewIndexUndefined = -1;
@@ -71,218 +67,233 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.dataSource = dataSource;
     self.state = ISDBViewStateInvalid;
     self.notifier = [ISNotifier new];
+    
+    dispatch_sync(self.dispatchQueue, ^{
+      [self loadEntries];
+    });
+    
   }
   return self;
 }
 
 
-- (void)invalidate
+- (void)invalidate:(BOOL)reload
 {
-  assert([[NSThread currentThread] isMainThread]);
-  self.state = ISDBViewStateInvalid;
-}
+  @synchronized (self) {
+    self.state = ISDBViewStateInvalid;
 
-
-- (void)reload
-{
-  [self invalidate];
-  // Force an update through if we have active observers.
-  if (self.notifier.count > 0) {
-    [self update];
+    // Only attempt to reload if we have no observers.
+    if (self.notifier.count > 0) {
+      dispatch_async(self.dispatchQueue, ^{
+        [self updateEntries];
+      });
+    }
   }
 }
 
 
-- (void)update
+- (void)loadEntries
 {
-  assert([[NSThread currentThread] isMainThread]);
-  if (self.state != ISDBViewStateValid) {
+  @synchronized (self) {
+    assert(dispatch_get_current_queue() == self.dispatchQueue);
+    assert(self.entries == nil);
+    assert(self.state == ISDBViewStateInvalid);
+    self.entries = [self.dataSource database:self.database
+                            entriesForOffset:0
+                                       limit:-1];
     self.state = ISDBViewStateValid;
+  }
+}
+
+
+- (void)updateEntries
+{
+  assert(dispatch_get_current_queue() == self.dispatchQueue);
+  assert(self.entries != nil);
+  
+  // Only run if we're not currently updating the entries.
+  @synchronized (self) {
+    if (self.state == ISDBViewStateValid) {
+      return;
+    } else {
+      self.state = ISDBViewStateValid;
+    }
+  }
+  
+  // Fetch the updated entries.
+  BEGIN_TIME
+  NSArray *updatedEntries = [self.dataSource database:self.database
+                                     entriesForOffset:0
+                                                limit:-1];
+  END_TIME(@"Update")
+  
+  // Perform the comparison on a different thread to ensure we do
+  // not block the UI thread.  Since we are always dispatching updates
+  // onto a common queue we can guarantee that updates are performed in
+  // order (though they may be delayed).
+  // Updates are cross-posted back to the main thread.
+  dispatch_queue_t global_queue
+  = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+  dispatch_async(global_queue, ^{
     
-    // Fetch the updated entries.
-    BEGIN_TIME
-    NSArray *updatedEntries = [self.dataSource database:self.database
-                                       entriesForOffset:0
-                                                  limit:-1];
-    END_TIME(@"Update")
+    BEGIN_TIME;
+    NSArray *diff = [self.entries diff:updatedEntries];
+    END_TIME(@"Compare");
     
-    if (self.entries == nil) {
-    
-      // When initially updating the view it is not necessary to
-      // perform a comparison.  We therefore update the entries
-      // immediately.
+    // Notify our observers.
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      [self.notifier notify:@selector(viewBeginUpdates:)
+                 withObject:self];
+      
       self.entries = updatedEntries;
       
-    } else {
+      for (NSArrayOperation *operation in diff) {
+
+        if (operation.type == NSArrayOperationRemove) {
+          [self.notifier notify:@selector(view:entryDeleted:)
+                     withObject:self
+                     withObject:[NSNumber numberWithInteger:operation.index]];
+        } else if (operation.type == NSArrayOperationInsert) {
+          [self.notifier notify:@selector(view:entryInserted:)
+                     withObject:self
+                     withObject:[NSNumber numberWithInteger:operation.index]];
+        }
+
+        //[self.notifier notify:@selector(view:entryMoved:)
+        //           withObject:self
+        //           withObject:move];
+      }
       
-      // Perform the comparison on a different thread to ensure we do
-      // not block the UI thread.  Since we are always dispatching updates
-      // onto a common queue we can guarantee that updates are performed in
-      // order (though they may be delayed).
-      // Updates are cross-posted back to the main thread.
-#ifdef DISPATCH_QUEUE
-      dispatch_async(self.dispatchQueue, ^{
-#endif
-      
-        BEGIN_TIME;
-        NSArray *diff = [self.entries diff:updatedEntries];
-        END_TIME(@"Compare");
-        
-        // Notify our observers.
-#ifdef DISPATCH_QUEUE
-        dispatch_sync(dispatch_get_main_queue(), ^{
-#endif
-          [self.notifier notify:@selector(viewBeginUpdates:)
-                     withObject:self];
-          
-          self.entries = updatedEntries;
-          
-          for (NSArrayOperation *operation in diff) {
+      [self.notifier notify:@selector(viewEndUpdates:)
+                 withObject:self];
 
-            if (operation.type == NSArrayOperationRemove) {
-              [self.notifier notify:@selector(view:entryDeleted:)
-                         withObject:self
-                         withObject:[NSNumber numberWithInteger:operation.index]];
-            } else if (operation.type == NSArrayOperationInsert) {
-              [self.notifier notify:@selector(view:entryInserted:)
-                         withObject:self
-                         withObject:[NSNumber numberWithInteger:operation.index]];
-            }
+    });
+  });
 
-            //[self.notifier notify:@selector(view:entryMoved:)
-            //           withObject:self
-            //           withObject:move];
-          }
-          
-          [self.notifier notify:@selector(viewEndUpdates:)
-                     withObject:self];
-
-#ifdef DISPATCH_QUEUE
-        });
-      });
-#endif
-    
-    }
-    
-  }
 }
 
 
 - (NSUInteger)count
 {
-  __block NSUInteger result;
-  [self countCompletion:^(NSUInteger count) {
-    result = count;
-  }];
-  return result;
+  @synchronized (self) {
+    // We may return an out-of-date result for the count, but we fire an
+    // asynchronous update which will ensure we return the latest version
+    // as-and-when it is available.
+    dispatch_async(self.dispatchQueue, ^{
+      [self updateEntries];
+    });
+    return self.entries.count;
+  }
 }
 
 
 - (void)countCompletion:(void (^)(NSUInteger))completionBlock
 {
-  [self executeSynchronouslyOnMainThread:^{
-    [self update];
+  dispatch_async(self.dispatchQueue, ^{
+    [self updateEntries];
     completionBlock(self.entries.count);
-  }];
+  });
 }
 
 
 - (void)entryForIdentifier:(id)identifier
                 completion:(void (^)(NSDictionary *entry))completionBlock
 {
-  [self executeSynchronouslyOnMainThread:^{
+  dispatch_async(self.dispatchQueue, ^{
     NSDictionary *entry = [self.dataSource database:self.database
                                  entryForIdentifier:identifier];
-    completionBlock(entry);
-  }];
+    dispatch_async(dispatch_get_main_queue(), ^{
+      completionBlock(entry);
+    });
+  });
 }
 
 
 - (void)entryForIndex:(NSInteger)index
            completion:(void (^)(NSDictionary *entry))completionBlock
 {
-  [self executeSynchronouslyOnMainThread:^{
-    [self update];
+  dispatch_async(self.dispatchQueue, ^{
+    [self updateEntries];
     if (index < self.entries.count) {
       NSString *identifier = [self.entries objectAtIndex:index];
       NSDictionary *entry = [self.dataSource database:self.database
                                    entryForIdentifier:identifier];
-      completionBlock(entry);
+      dispatch_async(dispatch_get_main_queue(), ^{
+        completionBlock(entry);
+      });
     } else {
-      completionBlock(nil);
+      dispatch_async(dispatch_get_main_queue(), ^{
+        completionBlock(nil);
+      });
     }
-  }];
-}
-
-
-- (void)executeSynchronouslyOnMainThread:(ISDBTask)task
-{
-  if ([[NSThread currentThread] isMainThread]) {
-    task();
-  } else {
-    dispatch_sync(dispatch_get_main_queue(), task);
-  }
+  });
 }
 
 
 - (void)insert:(NSDictionary *)entry
     completion:(void (^)(id identifier))completionBlock
 {
-  [self executeSynchronouslyOnMainThread:^{
+  dispatch_async(self.dispatchQueue, ^{
     if ([self.dataSource respondsToSelector:@selector(database:insert:)]) {
       NSString *identifier = [self.dataSource database:self.database
                                                 insert:entry];
       if (identifier) {
-        [self invalidate];
+        [self invalidate:NO];
       }
       if (completionBlock != NULL) {
-        completionBlock(identifier);
+        dispatch_async(dispatch_get_main_queue(), ^{
+          completionBlock(identifier);
+        });
       }
     } else {
       // TODO Throw an exception.
     }
-  }];
+  });
 }
 
 
 - (void) update:(NSDictionary *)entry
      completion:(void (^)(id identifier))completionBlock
 {
-  [self executeSynchronouslyOnMainThread:^{
+  dispatch_async(self.dispatchQueue, ^{
     if ([self.dataSource respondsToSelector:@selector(database:update:)]) {
       NSString *identifier = [self.dataSource database:self.database
                                                 update:entry];
       if (identifier) {
-        [self invalidate];
+        [self invalidate:NO];
       }
       if (completionBlock != NULL) {
-        completionBlock(identifier);
+        dispatch_async(dispatch_get_main_queue(), ^{
+          completionBlock(identifier);
+        });
       }
     } else {
       // TODO Throw an exception.
     }
-  }];
+  });
 }
 
 
 - (void)delete:(NSDictionary *)entry
     completion:(void (^)(id identifier))completionBlock
 {
-  [self executeSynchronouslyOnMainThread:^{
+  dispatch_async(self.dispatchQueue, ^{
     if ([self.database respondsToSelector:@selector(database:delete:)]) {
-      [self update];
+      [self updateEntries];
       NSString *identifier = [self.dataSource database:self.database
                                                 delete:entry];
       if (identifier) {
-        [self invalidate];
+        [self invalidate:NO];
       }
       if (completionBlock != NULL) {
-        completionBlock(identifier);
+        dispatch_sync(dispatch_get_main_queue(), ^{
+          completionBlock(identifier);
+        });
       }
     } else {
       // TODO Throw an exception.
     }
-  }];
+  });
 }
 
 
@@ -291,13 +302,17 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 
 - (void) addObserver:(id<ISDBViewObserver>)observer
 {
-  [self.notifier addObserver:observer];
+  @synchronized (self) {
+    [self.notifier addObserver:observer];
+  }
 }
 
 
 - (void) removeObserver:(id<ISDBViewObserver>)observer
 {
-  [self.notifier removeObserver:observer];
+  @synchronized (self) {
+    [self.notifier removeObserver:observer];
+  }
 }
 
 

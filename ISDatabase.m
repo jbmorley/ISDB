@@ -160,74 +160,83 @@ static NSString *ColumnNameVersion = @"version";
 
 - (BOOL)open
 {
+  __block BOOL result;
+  
   assert(self.state == ISDatabaseStateClosed);
-  NSFileManager *fileManager = [NSFileManager defaultManager];
-  BOOL databaseExists = [fileManager fileExistsAtPath:self.path];
-  self.database = [FMDatabase databaseWithPath:self.path];
-  if ([self.database open]) {
-    self.state = ISDatabaseStateOpen;
-    @try {
-
-      // If the database did not exist, then we can assume a successful
-      // open has created the database.
-      if (!databaseExists) {
-
-        [self createVersionTable];
-        [self create];
-        self.state = ISDatabaseStateReady;
+  dispatch_sync(self.dispatchQueue, ^{
+    
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    BOOL databaseExists = [fileManager fileExistsAtPath:self.path];
+    self.database = [FMDatabase databaseWithPath:self.path];
+    if ([self.database open]) {
+      self.state = ISDatabaseStateOpen;
+      @try {
         
-      } else {
-        
-        NSUInteger currentVersion = self.currentVersion;
-        NSUInteger version = self.version;
-        if (currentVersion < version) {
-          [self updateOldVersion:currentVersion
-                      newVersion:version];
-        } else if (currentVersion > version) {
-          @throw [NSException exceptionWithName:@"DatabaseVersionTooRecent"
-                                         reason:@"The database version is higher than that supported by the provider."
-                                       userInfo:nil];
+        // If the database did not exist, then we can assume a successful
+        // open has created the database.
+        if (!databaseExists) {
+          
+          [self createVersionTable];
+          [self create];
+          self.state = ISDatabaseStateReady;
+          
         } else {
-          NSLog(@"Successfully openend database '%@' with version %d",
-                self.path, version);
+          
+          NSUInteger currentVersion = self.currentVersion;
+          NSUInteger version = self.version;
+          if (currentVersion < version) {
+            [self updateOldVersion:currentVersion
+                        newVersion:version];
+          } else if (currentVersion > version) {
+            @throw [NSException exceptionWithName:@"DatabaseVersionTooRecent"
+                                           reason:@"The database version is higher than that supported by the provider."
+                                         userInfo:nil];
+          } else {
+            NSLog(@"Successfully openend database '%@' with version %d",
+                  self.path, version);
+          }
+          self.state = ISDatabaseStateReady;
+          
         }
-        self.state = ISDatabaseStateReady;
+        
+        // Register for updates.
+        [self.database update:self
+                     selector:@selector(databaseDidUpdate)];
+        
+        result = YES; return;
+        
         
       }
-      
-      // Register for updates.
-      [self.database update:self
-                   selector:@selector(databaseDidUpdate)];
-      
-      return YES;
-
-      
-    }
-    @catch (NSException *exception) {
-      
-      // Clean up from a failed create or update.
-      [self.database close];
-      self.database = nil;
-      self.state = ISDatabaseStateClosed;
-      if (!databaseExists) {
-        [fileManager removeItemAtPath:self.path
-                                error:nil];
+      @catch (NSException *exception) {
+        
+        // Clean up from a failed create or update.
+        [self.database close];
+        self.database = nil;
+        self.state = ISDatabaseStateClosed;
+        if (!databaseExists) {
+          [fileManager removeItemAtPath:self.path
+                                  error:nil];
+        }
+        result = NO; return;
+        
       }
-      return NO;
       
     }
     
-  }
+    self.database = nil;
+    result = NO; return;
+
+  });
   
-  self.database = nil;
-  return NO;
+  return result;
+  
 }
 
 
 - (void)databaseDidUpdate
 {
   for (ISDBView *view in self.views) {
-    [view reload];
+    [view invalidate:YES];
   }
 }
 
@@ -235,7 +244,9 @@ static NSString *ColumnNameVersion = @"version";
 - (void)close
 {
   assert(self.state != ISDatabaseStateClosed);
-  [self.database close];
+  dispatch_sync(self.dispatchQueue, ^{
+    [self.database close];
+  });
   self.state = ISDatabaseStateClosed;
 }
 
