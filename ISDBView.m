@@ -138,34 +138,36 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     
     BEGIN_TIME;
     NSArray *diff = [self.entries diff:updatedEntries];
+    
     END_TIME(@"Compare");
     
     // Notify our observers.
     dispatch_sync(dispatch_get_main_queue(), ^{
-      [self.notifier notify:@selector(viewBeginUpdates:)
-                 withObject:self];
+      @synchronized (self) {
       
-      self.entries = updatedEntries;
-      
-      for (NSArrayOperation *operation in diff) {
+        [self.notifier notify:@selector(viewBeginUpdates:)
+                   withObject:self];
+        
+        self.entries = updatedEntries;
+        
+        for (NSArrayOperation *operation in diff) {
 
-        if (operation.type == NSArrayOperationRemove) {
-          [self.notifier notify:@selector(view:entryDeleted:)
-                     withObject:self
-                     withObject:[NSNumber numberWithInteger:operation.index]];
-        } else if (operation.type == NSArrayOperationInsert) {
-          [self.notifier notify:@selector(view:entryInserted:)
-                     withObject:self
-                     withObject:[NSNumber numberWithInteger:operation.index]];
+          if (operation.type == NSArrayOperationRemove) {
+            [self.notifier notify:@selector(view:entryDeleted:)
+                       withObject:self
+                       withObject:[NSNumber numberWithInteger:operation.index]];
+          } else if (operation.type == NSArrayOperationInsert) {
+            [self.notifier notify:@selector(view:entryInserted:)
+                       withObject:self
+                       withObject:[NSNumber numberWithInteger:operation.index]];
+          }
+
         }
-
-        //[self.notifier notify:@selector(view:entryMoved:)
-        //           withObject:self
-        //           withObject:move];
+        
+        [self.notifier notify:@selector(viewEndUpdates:)
+                   withObject:self];
+        
       }
-      
-      [self.notifier notify:@selector(viewEndUpdates:)
-                 withObject:self];
 
     });
   });
@@ -187,11 +189,15 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
+// TODO Consider removing this.
 - (void)countCompletion:(void (^)(NSUInteger))completionBlock
 {
+  dispatch_queue_t callingQueue = dispatch_get_current_queue();
   dispatch_async(self.dispatchQueue, ^{
     [self updateEntries];
-    completionBlock(self.entries.count);
+    dispatch_sync(callingQueue, ^{
+      completionBlock(self.entries.count);
+    });
   });
 }
 
@@ -199,10 +205,11 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 - (void)entryForIdentifier:(id)identifier
                 completion:(void (^)(NSDictionary *entry))completionBlock
 {
+  dispatch_queue_t callingQueue = dispatch_get_current_queue();
   dispatch_async(self.dispatchQueue, ^{
     NSDictionary *entry = [self.dataSource database:self.database
                                  entryForIdentifier:identifier];
-    dispatch_async(dispatch_get_main_queue(), ^{
+    dispatch_async(callingQueue, ^{
       completionBlock(entry);
     });
   });
@@ -212,17 +219,18 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 - (void)entryForIndex:(NSInteger)index
            completion:(void (^)(NSDictionary *entry))completionBlock
 {
+  dispatch_queue_t callingQueue = dispatch_get_current_queue();
   dispatch_async(self.dispatchQueue, ^{
     [self updateEntries];
     if (index < self.entries.count) {
       NSString *identifier = [self.entries objectAtIndex:index];
       NSDictionary *entry = [self.dataSource database:self.database
                                    entryForIdentifier:identifier];
-      dispatch_async(dispatch_get_main_queue(), ^{
+      dispatch_async(callingQueue, ^{
         completionBlock(entry);
       });
     } else {
-      dispatch_async(dispatch_get_main_queue(), ^{
+      dispatch_async(callingQueue, ^{
         completionBlock(nil);
       });
     }
@@ -233,6 +241,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 - (void)insert:(NSDictionary *)entry
     completion:(void (^)(id identifier))completionBlock
 {
+  dispatch_queue_t callingQueue = dispatch_get_current_queue();
   dispatch_async(self.dispatchQueue, ^{
     if ([self.dataSource respondsToSelector:@selector(database:insert:)]) {
       NSString *identifier = [self.dataSource database:self.database
@@ -241,7 +250,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
         [self invalidate:NO];
       }
       if (completionBlock != NULL) {
-        dispatch_async(dispatch_get_main_queue(), ^{
+        dispatch_async(callingQueue, ^{
           completionBlock(identifier);
         });
       }
@@ -255,6 +264,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 - (void) update:(NSDictionary *)entry
      completion:(void (^)(id identifier))completionBlock
 {
+  dispatch_queue_t callingQueue = dispatch_get_current_queue();
   dispatch_async(self.dispatchQueue, ^{
     if ([self.dataSource respondsToSelector:@selector(database:update:)]) {
       NSString *identifier = [self.dataSource database:self.database
@@ -263,7 +273,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
         [self invalidate:NO];
       }
       if (completionBlock != NULL) {
-        dispatch_async(dispatch_get_main_queue(), ^{
+        dispatch_async(callingQueue, ^{
           completionBlock(identifier);
         });
       }
@@ -277,6 +287,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 - (void)delete:(NSDictionary *)entry
     completion:(void (^)(id identifier))completionBlock
 {
+  dispatch_queue_t callingQueue = dispatch_get_current_queue();
   dispatch_async(self.dispatchQueue, ^{
     if ([self.database respondsToSelector:@selector(database:delete:)]) {
       [self updateEntries];
@@ -286,7 +297,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
         [self invalidate:NO];
       }
       if (completionBlock != NULL) {
-        dispatch_sync(dispatch_get_main_queue(), ^{
+        dispatch_sync(callingQueue, ^{
           completionBlock(identifier);
         });
       }
