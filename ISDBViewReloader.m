@@ -20,26 +20,38 @@
 // SOFTWARE.
 //
 
-#import <Foundation/Foundation.h>
-#import "FMDatabase.h"
-#import "ISDBEntry.h"
 #import "ISDBViewReloader.h"
+#import "ISDBView.h"
 
-@protocol ISDBDataSource <NSObject>
 
-- (NSArray *)database:(FMDatabase *)database
-     entriesForOffset:(NSUInteger)offset
-                limit:(NSInteger)limit;
-- (NSDictionary *)database:(FMDatabase *)database
-        entryForIdentifier:(id)identifier;
+@interface ISDBViewReloader ()
 
-@optional
-- (void)initialize:(ISDBViewReloader *)reloader;
-- (NSString *)database:(FMDatabase *)database
-                insert:(NSDictionary *)entry;
-- (NSString *)database:(FMDatabase *)database
-                update:(NSDictionary *)entry;
-- (NSString *)database:(FMDatabase *)database
-                delete:(NSDictionary *)entry;
+@property (weak, nonatomic) ISDBView *view;
+
+@end
+
+@implementation ISDBViewReloader
+
++ (id)reloaderWithView:(ISDBView *)view
+{
+  return [[self alloc] initWithView:view];
+}
+
+
+- (id)initWithView:(ISDBView *)view
+{
+  self = [super init];
+  if (self) {
+    self.view = view;
+  }
+  return self;
+}
+
+
+- (void)reload
+{
+  [self.view invalidate:YES];
+}
+
 
 @end

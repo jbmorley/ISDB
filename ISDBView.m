@@ -68,6 +68,10 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.state = ISDBViewStateInvalid;
     self.notifier = [ISNotifier new];
     
+    if ([self.dataSource respondsToSelector:@selector(initialize:)]) {
+      [self.dataSource initialize:[[ISDBViewReloader alloc] initWithView:self]];
+    }
+    
     dispatch_sync(self.dispatchQueue, ^{
       [self loadEntries];
     });
