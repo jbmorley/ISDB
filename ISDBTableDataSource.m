@@ -44,10 +44,16 @@
     self.table = table;
     self.identifier = identifier;
     self.orderBy = orderBy;
-    self.select = [NSString stringWithFormat:
-                   @"SELECT * FROM %@ ORDER BY %@",
-                   self.table,
-                   self.orderBy];
+    if (self.orderBy) {
+      self.select = [NSString stringWithFormat:
+                     @"SELECT * FROM %@ ORDER BY %@",
+                     self.table,
+                     self.orderBy];
+    } else {
+      self.select = [NSString stringWithFormat:
+                     @"SELECT * FROM %@",
+                     self.table];
+    }
     self.selectByIdentifier = [NSString stringWithFormat:
                                @"SELECT * FROM %@ WHERE %@ = ?",
                                self.table,
