@@ -71,10 +71,13 @@
                 limit:(NSInteger)limit
 {
   assert((offset == 0) && (limit == -1));
+  NSLog(@"WARNING: Unable to identify a summary row. Change comparisons may be slow.");
   NSMutableArray *entries = [NSMutableArray arrayWithCapacity:3];
   FMResultSet *result = [database executeQuery:self.select];
   while ([result next]) {
-    [entries addObject:[result objectForColumnName:self.identifier]];
+    NSString *identifier = [result objectForColumnName:self.identifier];
+    [entries addObject:[ISDBEntry entryWithIdentifier:identifier
+                                              summary:[result resultDict]]];
   }
   return entries;
 }

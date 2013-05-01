@@ -12,8 +12,8 @@
 
 @property (strong, nonatomic, readonly) id identifier;
 
-+ (id)identifierWithIdentifier:(id)identifier
-                       summary:(id)summary;
++ (id)entryWithIdentifier:(id)identifier
+                  summary:(id)summary;
 - (id)initWithIdentifier:(id)identifier
                  summary:(id)summary;
 

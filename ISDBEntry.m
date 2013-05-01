@@ -18,8 +18,8 @@
 @implementation ISDBEntry
 
 
-+ (id)identifierWithIdentifier:(id)identifier
-                       summary:(id)summary
++ (id)entryWithIdentifier:(id)identifier
+                  summary:(id)summary
 {
   return [[self alloc] initWithIdentifier:identifier
                                   summary:summary];

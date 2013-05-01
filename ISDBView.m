@@ -222,7 +222,8 @@ static NSString *const kSQLiteTypeInteger = @"integer";
   dispatch_async(self.dispatchQueue, ^{
     [self updateEntries];
     if (index < self.entries.count) {
-      NSString *identifier = [self.entries objectAtIndex:index];
+      ISDBEntry *dbEntry = [self.entries objectAtIndex:index];
+      NSString *identifier = dbEntry.identifier;
       NSDictionary *entry = [self.dataSource database:self.database
                                    entryForIdentifier:identifier];
       dispatch_async(callingQueue, ^{
