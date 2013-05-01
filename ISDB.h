@@ -9,5 +9,4 @@
 #import "ISDatabase.h"
 
 #import "ISDBTableDataSource.h"
-#import "ISDBQueryDataSource.h"
 #import "ISDBBlockDataSource.h"
