@@ -121,11 +121,9 @@ static NSString *const kSQLiteTypeInteger = @"integer";
   }
   
   // Fetch the updated entries.
-  BEGIN_TIME
   NSArray *updatedEntries = [self.dataSource database:self.database
                                      entriesForOffset:0
                                                 limit:-1];
-  END_TIME(@"Update")
   
   // Perform the comparison on a different thread to ensure we do
   // not block the UI thread.  Since we are always dispatching updates
@@ -136,14 +134,27 @@ static NSString *const kSQLiteTypeInteger = @"integer";
   = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
   dispatch_async(global_queue, ^{
     
-    BEGIN_TIME;
-    NSArray *diff = [self.entries diff:updatedEntries];
+    // We are using an ordered dispatch queue here, so it is guaranteed
+    // that the current entries will not be being edited a this point.
+    // As we are only performing a read, we can safely do so without
+    // entering a synchronized block.
     
-    END_TIME(@"Compare");
+    // Determine the changes.
+    // This is done in an incredibly rudimentary way at the moment and needs
+    // to be improved in the future.
+    NSMutableArray *diff
+    = [NSMutableArray arrayWithCapacity:
+       self.entries.count + updatedEntries.count];
+    for (NSInteger i = self.entries.count-1; i >= 0; i--) {
+      [diff addObject:[NSArrayOperation operationWithType:NSArrayOperationRemove index:i object:self.entries[i]]];
+    }
+    for (NSInteger i = 0; i < updatedEntries.count; i++) {
+      [diff addObject:[NSArrayOperation operationWithType:NSArrayOperationInsert index:i object:updatedEntries[i]]];
+    }
     
     // Notify our observers.
     // TODO Consider whether we might be safe to dispatch async here?
-    dispatch_async(dispatch_get_main_queue(), ^{
+    dispatch_sync(dispatch_get_main_queue(), ^{
       @synchronized (self) {
       
         [self.notifier notify:@selector(viewBeginUpdates:)
