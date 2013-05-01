@@ -201,19 +201,6 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
-// TODO Consider removing this.
-- (void)countCompletion:(void (^)(NSUInteger))completionBlock
-{
-  dispatch_queue_t callingQueue = dispatch_get_current_queue();
-  dispatch_async(self.dispatchQueue, ^{
-    [self updateEntries];
-    dispatch_sync(callingQueue, ^{
-      completionBlock(self.entries.count);
-    });
-  });
-}
-
-
 - (void)entryForIdentifier:(id)identifier
                 completion:(void (^)(NSDictionary *entry))completionBlock
 {

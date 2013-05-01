@@ -52,7 +52,6 @@ entryInserted:(NSNumber *)index;
 @interface ISDBView : NSObject
 
 @property (nonatomic, readonly) NSUInteger count;
-- (void)countCompletion:(void (^)(NSUInteger))completionBlock;
 
 - (id) initWithDispatchQueue:(dispatch_queue_t)queue
                     database:(FMDatabase *)database
