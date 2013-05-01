@@ -142,7 +142,8 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     END_TIME(@"Compare");
     
     // Notify our observers.
-    dispatch_sync(dispatch_get_main_queue(), ^{
+    // TODO Consider whether we might be safe to dispatch async here?
+    dispatch_async(dispatch_get_main_queue(), ^{
       @synchronized (self) {
       
         [self.notifier notify:@selector(viewBeginUpdates:)
