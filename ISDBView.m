@@ -22,7 +22,6 @@
 
 #import "ISDBView.h"
 #import "ISNotifier.h"
-#import "NSArray+Diff.h"
 
 
 #define BEGIN_TIME \
