@@ -25,10 +25,12 @@
 @interface ISDBEntry : NSObject
 
 @property (strong, nonatomic, readonly) id identifier;
+@property (strong, nonatomic, readonly) id summary;
 
 + (id)entryWithIdentifier:(id)identifier
                   summary:(id)summary;
 - (id)initWithIdentifier:(id)identifier
                  summary:(id)summary;
+- (BOOL)isSummaryEqual:(ISDBEntry *)object;
 
 @end

@@ -24,8 +24,6 @@
 
 @interface ISDBEntry ()
 
-@property (strong, nonatomic, readonly) id summary;
-
 @end
 
 

@@ -13,6 +13,7 @@
 
 @property (strong, nonatomic) NSArray *candidates;
 @property (strong, nonatomic) ISDBViewReloader *reloader;
+@property (strong, nonatomic) NSMutableArray *entries;
 @property (strong, nonatomic) NSTimer *timer;
 
 @end
@@ -54,25 +55,32 @@
   = [NSMutableArray arrayWithArray:self.candidates];
   
   // Determine the length of the new version.
-  NSUInteger length = 6 + (arc4random() % 5);
-  NSMutableArray *entries = [NSMutableArray arrayWithCapacity:length];
+  NSUInteger length = 8 + (arc4random() % 3);
+  self.entries = [NSMutableArray arrayWithCapacity:length];
   
   for (NSUInteger i = 0; i < length; i++) {
     NSUInteger index = arc4random() % candidates.count;
     NSString *identifier = candidates[index];
-    [entries addObject:[ISDBEntry entryWithIdentifier:identifier
-                                              summary:identifier]];
+    NSString *summary = ((arc4random() % 2) == 0) ? @"A" : @"B";
+    [self.entries addObject:[ISDBEntry entryWithIdentifier:identifier
+                                                   summary:summary]];
     [candidates removeObjectAtIndex:index];
   }
   
-  return entries;
+  return self.entries;
 }
 
 
 - (NSDictionary *)database:(FMDatabase *)database
         entryForIdentifier:(id)identifier
 {
-  return @{@"show": identifier};
+  ISDBEntry *keyEntry = [ISDBEntry entryWithIdentifier:identifier
+                                               summary:nil];
+  NSUInteger index = [self.entries indexOfObject:keyEntry];
+  ISDBEntry *entry = [self.entries objectAtIndex:index];
+  NSString *details = [NSString stringWithFormat:@"%@: %@", entry.identifier, entry.summary];
+  
+  return @{@"show": details};
 }
 
 
