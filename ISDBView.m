@@ -36,6 +36,47 @@ typedef enum {
   ISDBViewStateValid
 } ISDBViewState;
 
+typedef enum {
+  ISDBViewOperationTypeInsert,
+  ISDBViewOperationTypeDelete,
+  ISDBViewOperaitonTypeUpdate,
+  ISDBViewOperationTypeMove
+} ISDBViewOperationType;
+
+@interface ISDBViewOperation : NSObject
+
+@property (nonatomic) ISDBViewOperationType type;
+@property (strong, nonatomic) id payload;
+
++ (id)operationWithType:(ISDBViewOperationType)type
+                payload:(id)payload;
+- (id)initWithType:(ISDBViewOperationType)type
+           payload:(id)payload;
+
+@end
+
+@implementation ISDBViewOperation
+
++ (id)operationWithType:(ISDBViewOperationType)type
+                payload:(id)payload
+{
+  return [[self alloc] initWithType:type
+                            payload:payload];
+}
+
+- (id)initWithType:(ISDBViewOperationType)type
+           payload:(id)payload
+{
+  self = [super init];
+  if (self) {
+    self.type = type;
+    self.payload = payload;
+  }
+  return self;
+}
+
+@end
+
 @interface ISDBView ()
 
 @property (nonatomic) ISDBViewState state;
@@ -139,66 +180,88 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     // entering a synchronized block.
     // TODO Perform the comparison here to avoid starving the main thread.
   
-    
+  BEGIN_TIME
+  NSMutableArray *actions = [NSMutableArray arrayWithCapacity:3];
+  NSInteger countBefore = self.entries.count;
+  NSInteger countAfter = updatedEntries.count;
+  
+//  for (NSInteger i = self.entries.count-1; i >= 0; i--) {
+//    ISDBEntry *entry = [self.entries objectAtIndex:i];
+//    NSUInteger newIndex = [updatedEntries indexOfObject:entry];
+//    if (newIndex != NSNotFound) {
+//      // Update.
+//      ISDBEntry *newEntry = [updatedEntries objectAtIndex:newIndex];
+//      if (![newEntry isSummaryEqual:entry]) {
+//        [self.notifier notify:@selector(view:entryUpdated:)
+//                   withObject:self
+//                   withObject:[NSNumber numberWithInteger:i]];
+//      }
+//    }
+//  }        
+
+  
+  for (NSInteger i = self.entries.count-1; i >= 0; i--) {
+    ISDBEntry *entry = [self.entries objectAtIndex:i];
+    NSUInteger newIndex = [updatedEntries indexOfObject:entry];
+    if (newIndex == NSNotFound) {
+      // Remove.
+      ISDBViewOperation *operation
+      = [ISDBViewOperation operationWithType:ISDBViewOperationTypeDelete
+                                     payload:[NSNumber numberWithInteger:i]];
+      [actions addObject:operation];
+      countBefore--;
+    } else {
+      if (i != newIndex) {
+        // Move.
+        ISDBViewOperation *operation
+        = [ISDBViewOperation operationWithType:ISDBViewOperationTypeMove
+                                       payload:@[[NSNumber numberWithInteger:i],
+           [NSNumber numberWithInteger:newIndex]]];
+        [actions addObject:operation];
+      }
+    }
+  }
+  
+  for (NSUInteger i = 0; i < updatedEntries.count; i++) {
+    ISDBEntry *entry = [updatedEntries objectAtIndex:i];
+    NSUInteger oldIndex = [self.entries indexOfObject:entry];
+    if (oldIndex == NSNotFound) {
+      // Add.
+      ISDBViewOperation *operation
+      = [ISDBViewOperation operationWithType:ISDBViewOperationTypeInsert
+                                     payload:[NSNumber numberWithInteger:i]];
+      [actions addObject:operation];
+      countBefore++;
+    }
+  }
+
+  assert(countBefore == countAfter);
+  END_TIME(@"Comparison");
+  
     // Notify our observers.
     dispatch_sync(dispatch_get_main_queue(), ^{
       @synchronized (self) {
         
-        NSInteger countBefore = self.entries.count;
-        NSInteger countAfter = updatedEntries.count;
-        
         [self.notifier notify:@selector(viewBeginUpdates:)
                    withObject:self];
         
-//        for (NSInteger i = self.entries.count-1; i >= 0; i--) {
-//          ISDBEntry *entry = [self.entries objectAtIndex:i];
-//          NSUInteger newIndex = [updatedEntries indexOfObject:entry];
-//          if (newIndex != NSNotFound) {
-//            // Update.
-//            ISDBEntry *newEntry = [updatedEntries objectAtIndex:newIndex];
-//            if (![newEntry isSummaryEqual:entry]) {
-//              [self.notifier notify:@selector(view:entryUpdated:)
-//                         withObject:self
-//                         withObject:[NSNumber numberWithInteger:i]];
-//            }
-//          }
-//        }        
-        
-        for (NSInteger i = self.entries.count-1; i >= 0; i--) {
-          ISDBEntry *entry = [self.entries objectAtIndex:i];
-          NSUInteger newIndex = [updatedEntries indexOfObject:entry];
-          if (newIndex == NSNotFound) {
-            // Remove.
+        for (ISDBViewOperation *operation in actions) {
+          if (operation.type == ISDBViewOperationTypeDelete) {
             [self.notifier notify:@selector(view:entryDeleted:)
                        withObject:self
-                       withObject:[NSNumber numberWithInteger:i]];
-            countBefore--;
-          } else {
-            if (i != newIndex) {
-              [self.notifier notify:@selector(view:entryMoved:)
-                         withObject:self
-                         withObject:@[[NSNumber numberWithInteger:i],
-               [NSNumber numberWithInteger:newIndex]]];
-            }
-          }
-        }
-        
-        for (NSUInteger i = 0; i < updatedEntries.count; i++) {
-          ISDBEntry *entry = [updatedEntries objectAtIndex:i];
-          NSUInteger oldIndex = [self.entries indexOfObject:entry];
-          if (oldIndex == NSNotFound) {
-            // Add.
+                       withObject:operation.payload];
+          } else if (operation.type == ISDBViewOperationTypeMove) {
+            [self.notifier notify:@selector(view:entryMoved:)
+                       withObject:self
+                       withObject:operation.payload];
+          } else if (operation.type == ISDBViewOperationTypeInsert) {
             [self.notifier notify:@selector(view:entryInserted:)
                        withObject:self
-                       withObject:[NSNumber numberWithInteger:i]];
-            countBefore++;
+                       withObject:operation.payload];
           }
-        }
-        
-        
-        assert(countBefore == countAfter);
-        self.entries = updatedEntries;
 
+        }
+        self.entries = updatedEntries;
         [self.notifier notify:@selector(viewEndUpdates:)
                    withObject:self];
         
