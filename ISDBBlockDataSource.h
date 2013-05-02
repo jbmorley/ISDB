@@ -26,7 +26,6 @@
 typedef NSArray *(^ISDBEntriesBlock)(FMDatabase *database);
 typedef NSDictionary *(^ISDBEntryBlock)(FMDatabase *database, id identifier);
 
-// TODO Rename this.
 @interface ISDBBlockDataSource : NSObject <ISDBDataSource>
 
 + (id)dataSourceWithEntriesBlock:(ISDBEntriesBlock)entriesBlock
