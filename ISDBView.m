@@ -276,7 +276,9 @@ static NSString *const kSQLiteTypeInteger = @"integer";
         });
       }
     } else {
-      // TODO Throw an exception.
+      @throw [NSException exceptionWithName:@"DataSourceInsertUnsupported"
+                                     reason:@"The data source does not implement the database:insert: selector."
+                                   userInfo:nil];
     }
   });
 }
@@ -299,7 +301,9 @@ static NSString *const kSQLiteTypeInteger = @"integer";
         });
       }
     } else {
-      // TODO Throw an exception.
+      @throw [NSException exceptionWithName:@"DataSourceUpdateUnsupported"
+                                     reason:@"The data source does not implement the database:update: selector."
+                                   userInfo:nil];
     }
   });
 }
@@ -323,7 +327,9 @@ static NSString *const kSQLiteTypeInteger = @"integer";
         });
       }
     } else {
-      // TODO Throw an exception.
+      @throw [NSException exceptionWithName:@"DataSourceDeleteUnsupported"
+                                     reason:@"The data source does not implement the database:delete: selector."
+                                   userInfo:nil];
     }
   });
 }
