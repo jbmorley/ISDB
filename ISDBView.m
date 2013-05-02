@@ -134,10 +134,10 @@ static NSString *const kSQLiteTypeInteger = @"integer";
   // onto a common queue we can guarantee that updates are performed in
   // order (though they may be delayed).
   // Updates are cross-posted back to the main thread.
-  dispatch_queue_t global_queue
-  = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-  dispatch_async(global_queue, ^{
-    
+//  dispatch_queue_t global_queue
+//  = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+//  dispatch_async(global_queue, ^{
+  
     // We are using an ordered dispatch queue here, so it is guaranteed
     // that the current entries will not be being edited a this point.
     // As we are only performing a read, we can safely do so without
@@ -146,47 +146,118 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     // Determine the changes.
     // This is done in an incredibly rudimentary way at the moment and needs
     // to be improved in the future.
-    NSMutableArray *diff
-    = [NSMutableArray arrayWithCapacity:
-       self.entries.count + updatedEntries.count];
-    for (NSInteger i = self.entries.count-1; i >= 0; i--) {
-      [diff addObject:[NSArrayOperation operationWithType:NSArrayOperationRemove index:i object:self.entries[i]]];
-    }
-    for (NSInteger i = 0; i < updatedEntries.count; i++) {
-      [diff addObject:[NSArrayOperation operationWithType:NSArrayOperationInsert index:i object:updatedEntries[i]]];
-    }
+//    NSMutableArray *diff
+//    = [NSMutableArray arrayWithCapacity:
+//       self.entries.count + updatedEntries.count];
+//    for (NSInteger i = self.entries.count-1; i >= 0; i--) {
+//      [diff addObject:[NSArrayOperation operationWithType:NSArrayOperationRemove index:i object:self.entries[i]]];
+//    }
+//    for (NSInteger i = 0; i < updatedEntries.count; i++) {
+//      [diff addObject:[NSArrayOperation operationWithType:NSArrayOperationInsert index:i object:updatedEntries[i]]];
+//    }
+    
+    
+
+    
+    
     
     // Notify our observers.
     // TODO Consider whether we might be safe to dispatch async here?
     dispatch_sync(dispatch_get_main_queue(), ^{
       @synchronized (self) {
-      
+        
+        NSInteger countBefore = self.entries.count;
+        NSInteger countAfter = updatedEntries.count;
+        
         [self.notifier notify:@selector(viewBeginUpdates:)
                    withObject:self];
         
-        self.entries = updatedEntries;
-        
-        for (NSArrayOperation *operation in diff) {
-
-          if (operation.type == NSArrayOperationRemove) {
+        for (NSInteger i = self.entries.count-1; i >= 0; i--) {
+          ISDBEntry *entry = [self.entries objectAtIndex:i];
+          NSUInteger newIndex = [updatedEntries indexOfObject:entry];
+          if (newIndex == NSNotFound) {
+            // Remove.
             [self.notifier notify:@selector(view:entryDeleted:)
                        withObject:self
-                       withObject:[NSNumber numberWithInteger:operation.index]];
-          } else if (operation.type == NSArrayOperationInsert) {
-            [self.notifier notify:@selector(view:entryInserted:)
+                       withObject:[NSNumber numberWithInteger:i]];
+            countBefore--;
+          } else {
+            [self.notifier notify:@selector(view:entryMoved:)
                        withObject:self
-                       withObject:[NSNumber numberWithInteger:operation.index]];
+                       withObject:@[[NSNumber numberWithInteger:i],
+             [NSNumber numberWithInteger:newIndex]]];
           }
-
         }
         
+        for (NSUInteger i = 0; i < updatedEntries.count; i++) {
+          ISDBEntry *entry = [updatedEntries objectAtIndex:i];
+          NSUInteger oldIndex = [self.entries indexOfObject:entry];
+          if (oldIndex == NSNotFound) {
+            // Add.
+            [self.notifier notify:@selector(view:entryInserted:)
+                       withObject:self
+                       withObject:[NSNumber numberWithInteger:i]];
+            countBefore++;
+          }
+        }
+        
+        // TODO If the deletes are resolved before anything happens, is this correct?
+        for (NSUInteger i = 0; i < self.entries.count; i++) {
+//          ISDBEntry *entry = [self.entries objectAtIndex:i];
+//          NSUInteger newIndex = [updatedEntries indexOfObject:entry];
+//          if (newIndex != NSNotFound) {
+//            // Move.
+//            if (newIndex != i) {
+//              [self.notifier notify:@selector(view:entryMoved:)
+//                         withObject:self
+//                         withObject:@[[NSNumber numberWithInteger:i],
+//               [NSNumber numberWithInteger:newIndex]]];
+//            }
+//          }
+          
+        }
+
+        
+        assert(countBefore == countAfter);
+        
+        self.entries = updatedEntries;
+
         [self.notifier notify:@selector(viewEndUpdates:)
                    withObject:self];
         
       }
+      
+        
+        
+        
+        
+      
+//        [self.notifier notify:@selector(viewBeginUpdates:)
+//                   withObject:self];
+//        
+//        self.entries = updatedEntries;
+//        
+//        for (NSArrayOperation *operation in diff) {
+//
+//          if (operation.type == NSArrayOperationRemove) {
+//            [self.notifier notify:@selector(view:entryDeleted:)
+//                       withObject:self
+//                       withObject:[NSNumber numberWithInteger:operation.index]];
+//          } else if (operation.type == NSArrayOperationInsert) {
+//            [self.notifier notify:@selector(view:entryInserted:)
+//                       withObject:self
+//                       withObject:[NSNumber numberWithInteger:operation.index]];
+//          }
+//
+//        }
+//        
+//        [self.notifier notify:@selector(viewEndUpdates:)
+//                   withObject:self];
+//        
+//      }
 
     });
-  });
+//  });
 
 }
 

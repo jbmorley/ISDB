@@ -34,7 +34,7 @@
 - (void)initialize:(ISDBViewReloader *)reloader
 {
   self.reloader = reloader;
-  self.timer = [NSTimer scheduledTimerWithTimeInterval:1
+  self.timer = [NSTimer scheduledTimerWithTimeInterval:2
                                                 target:self
                                               selector:@selector(reload)
                                               userInfo:nil

@@ -25,6 +25,7 @@
 typedef enum {
   NSArrayOperationRemove,
   NSArrayOperationInsert,
+  NSArrayOperationMove,
 } NSArrayOperationType;
 
 @interface NSArrayOperation : NSObject
