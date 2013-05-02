@@ -24,8 +24,6 @@
 #import "FMDatabase.h"
 #import "ISDBDataSource.h"
 
-// TODO Assert that we're running on the main thread.
-
 typedef void(^ISDBTask)();
 
 extern NSInteger ISDBViewIndexUndefined;
@@ -33,8 +31,6 @@ extern NSInteger ISDBViewIndexUndefined;
 @class ISDBView;
 
 @protocol ISDBViewObserver <NSObject>
-// TODO Consider if these should be optional.
-@optional
 
 - (void) viewBeginUpdates:(ISDBView *)view;
 - (void) viewEndUpdates:(ISDBView *)view;
