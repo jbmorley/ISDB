@@ -172,6 +172,20 @@ static NSString *const kSQLiteTypeInteger = @"integer";
         [self.notifier notify:@selector(viewBeginUpdates:)
                    withObject:self];
         
+//        for (NSInteger i = self.entries.count-1; i >= 0; i--) {
+//          ISDBEntry *entry = [self.entries objectAtIndex:i];
+//          NSUInteger newIndex = [updatedEntries indexOfObject:entry];
+//          if (newIndex != NSNotFound) {
+//            // Update.
+//            ISDBEntry *newEntry = [updatedEntries objectAtIndex:newIndex];
+//            if (![newEntry isSummaryEqual:entry]) {
+//              [self.notifier notify:@selector(view:entryUpdated:)
+//                         withObject:self
+//                         withObject:[NSNumber numberWithInteger:i]];
+//            }
+//          }
+//        }        
+        
         for (NSInteger i = self.entries.count-1; i >= 0; i--) {
           ISDBEntry *entry = [self.entries objectAtIndex:i];
           NSUInteger newIndex = [updatedEntries indexOfObject:entry];
@@ -182,10 +196,12 @@ static NSString *const kSQLiteTypeInteger = @"integer";
                        withObject:[NSNumber numberWithInteger:i]];
             countBefore--;
           } else {
-            [self.notifier notify:@selector(view:entryMoved:)
-                       withObject:self
-                       withObject:@[[NSNumber numberWithInteger:i],
-             [NSNumber numberWithInteger:newIndex]]];
+            if (i != newIndex) {
+              [self.notifier notify:@selector(view:entryMoved:)
+                         withObject:self
+                         withObject:@[[NSNumber numberWithInteger:i],
+               [NSNumber numberWithInteger:newIndex]]];
+            }
           }
         }
         
@@ -201,63 +217,15 @@ static NSString *const kSQLiteTypeInteger = @"integer";
           }
         }
         
-        // TODO If the deletes are resolved before anything happens, is this correct?
-        for (NSUInteger i = 0; i < self.entries.count; i++) {
-//          ISDBEntry *entry = [self.entries objectAtIndex:i];
-//          NSUInteger newIndex = [updatedEntries indexOfObject:entry];
-//          if (newIndex != NSNotFound) {
-//            // Move.
-//            if (newIndex != i) {
-//              [self.notifier notify:@selector(view:entryMoved:)
-//                         withObject:self
-//                         withObject:@[[NSNumber numberWithInteger:i],
-//               [NSNumber numberWithInteger:newIndex]]];
-//            }
-//          }
-          
-        }
-
         
         assert(countBefore == countAfter);
-        
         self.entries = updatedEntries;
 
         [self.notifier notify:@selector(viewEndUpdates:)
                    withObject:self];
         
       }
-      
-        
-        
-        
-        
-      
-//        [self.notifier notify:@selector(viewBeginUpdates:)
-//                   withObject:self];
-//        
-//        self.entries = updatedEntries;
-//        
-//        for (NSArrayOperation *operation in diff) {
-//
-//          if (operation.type == NSArrayOperationRemove) {
-//            [self.notifier notify:@selector(view:entryDeleted:)
-//                       withObject:self
-//                       withObject:[NSNumber numberWithInteger:operation.index]];
-//          } else if (operation.type == NSArrayOperationInsert) {
-//            [self.notifier notify:@selector(view:entryInserted:)
-//                       withObject:self
-//                       withObject:[NSNumber numberWithInteger:operation.index]];
-//          }
-//
-//        }
-//        
-//        [self.notifier notify:@selector(viewEndUpdates:)
-//                   withObject:self];
-//        
-//      }
-
     });
-//  });
 
 }
 
