@@ -129,40 +129,19 @@ static NSString *const kSQLiteTypeInteger = @"integer";
                                      entriesForOffset:0
                                                 limit:-1];
   
-  // Perform the comparison on a different thread to ensure we do
-  // not block the UI thread.  Since we are always dispatching updates
-  // onto a common queue we can guarantee that updates are performed in
-  // order (though they may be delayed).
-  // Updates are cross-posted back to the main thread.
-//  dispatch_queue_t global_queue
-//  = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-//  dispatch_async(global_queue, ^{
-  
+    // Perform the comparison on a different thread to ensure we do
+    // not block the UI thread.  Since we are always dispatching updates
+    // onto a common queue we can guarantee that updates are performed in
+    // order (though they may be delayed).
+    // Updates are cross-posted back to the main thread.
     // We are using an ordered dispatch queue here, so it is guaranteed
     // that the current entries will not be being edited a this point.
     // As we are only performing a read, we can safely do so without
     // entering a synchronized block.
-    
-    // Determine the changes.
-    // This is done in an incredibly rudimentary way at the moment and needs
-    // to be improved in the future.
-//    NSMutableArray *diff
-//    = [NSMutableArray arrayWithCapacity:
-//       self.entries.count + updatedEntries.count];
-//    for (NSInteger i = self.entries.count-1; i >= 0; i--) {
-//      [diff addObject:[NSArrayOperation operationWithType:NSArrayOperationRemove index:i object:self.entries[i]]];
-//    }
-//    for (NSInteger i = 0; i < updatedEntries.count; i++) {
-//      [diff addObject:[NSArrayOperation operationWithType:NSArrayOperationInsert index:i object:updatedEntries[i]]];
-//    }
-    
-    
-
-    
-    
+    // TODO Perform the comparison here to avoid starving the main thread.
+  
     
     // Notify our observers.
-    // TODO Consider whether we might be safe to dispatch async here?
     dispatch_sync(dispatch_get_main_queue(), ^{
       @synchronized (self) {
         
