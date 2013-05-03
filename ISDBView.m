@@ -169,37 +169,21 @@ static NSString *const kSQLiteTypeInteger = @"integer";
                                      entriesForOffset:0
                                                 limit:-1];
   
-    // Perform the comparison on a different thread to ensure we do
-    // not block the UI thread.  Since we are always dispatching updates
-    // onto a common queue we can guarantee that updates are performed in
-    // order (though they may be delayed).
-    // Updates are cross-posted back to the main thread.
-    // We are using an ordered dispatch queue here, so it is guaranteed
-    // that the current entries will not be being edited a this point.
-    // As we are only performing a read, we can safely do so without
-    // entering a synchronized block.
-    // TODO Perform the comparison here to avoid starving the main thread.
-  
-  BEGIN_TIME
+  // Perform the comparison on a different thread to ensure we do
+  // not block the UI thread.  Since we are always dispatching updates
+  // onto a common queue we can guarantee that updates are performed in
+  // order (though they may be delayed).
+  // Updates are cross-posted back to the main thread.
+  // We are using an ordered dispatch queue here, so it is guaranteed
+  // that the current entries will not be being edited a this point.
+  // As we are only performing a read, we can safely do so without
+  // entering a synchronized block.
   NSMutableArray *actions = [NSMutableArray arrayWithCapacity:3];
+  NSMutableArray *updates = [NSMutableArray arrayWithCapacity:3];
   NSInteger countBefore = self.entries.count;
   NSInteger countAfter = updatedEntries.count;
-  
-//  for (NSInteger i = self.entries.count-1; i >= 0; i--) {
-//    ISDBEntry *entry = [self.entries objectAtIndex:i];
-//    NSUInteger newIndex = [updatedEntries indexOfObject:entry];
-//    if (newIndex != NSNotFound) {
-//      // Update.
-//      ISDBEntry *newEntry = [updatedEntries objectAtIndex:newIndex];
-//      if (![newEntry isSummaryEqual:entry]) {
-//        [self.notifier notify:@selector(view:entryUpdated:)
-//                   withObject:self
-//                   withObject:[NSNumber numberWithInteger:i]];
-//      }
-//    }
-//  }        
 
-  
+  // Removes and moves.
   for (NSInteger i = self.entries.count-1; i >= 0; i--) {
     ISDBEntry *entry = [self.entries objectAtIndex:i];
     NSUInteger newIndex = [updatedEntries indexOfObject:entry];
@@ -222,6 +206,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     }
   }
   
+  // Additions and updates.
   for (NSUInteger i = 0; i < updatedEntries.count; i++) {
     ISDBEntry *entry = [updatedEntries objectAtIndex:i];
     NSUInteger oldIndex = [self.entries indexOfObject:entry];
@@ -232,11 +217,15 @@ static NSString *const kSQLiteTypeInteger = @"integer";
                                      payload:[NSNumber numberWithInteger:i]];
       [actions addObject:operation];
       countBefore++;
+    } else {
+      ISDBEntry *oldEntry = [self.entries objectAtIndex:oldIndex];
+      if (![oldEntry isSummaryEqual:entry]) {
+        [updates addObject:[NSNumber numberWithInteger:i]];
+      }
     }
   }
 
   assert(countBefore == countAfter);
-  END_TIME(@"Comparison");
   
     // Notify our observers.
     dispatch_sync(dispatch_get_main_queue(), ^{
@@ -264,6 +253,20 @@ static NSString *const kSQLiteTypeInteger = @"integer";
         self.entries = updatedEntries;
         [self.notifier notify:@selector(viewEndUpdates:)
                    withObject:self];
+
+        // We perform updates in a separate beginUpdates block to avoid
+        // performing multiple operations when used as a data source for
+        // UITableView.
+        [self.notifier notify:@selector(viewBeginUpdates:)
+                   withObject:self];
+        for (NSNumber *index in updates) {
+          [self.notifier notify:@selector(view:entryUpdated:)
+                     withObject:self
+                     withObject:index];
+        }
+        [self.notifier notify:@selector(viewEndUpdates:)
+                   withObject:self];
+
         
       }
     });
