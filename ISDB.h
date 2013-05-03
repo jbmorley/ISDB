@@ -8,5 +8,7 @@
 
 #import "ISDatabase.h"
 
+#import "ISDBChangeStream.h"
+
 #import "ISDBTableDataSource.h"
 #import "ISDBBlockDataSource.h"
