@@ -22,7 +22,7 @@
 
 #import <Foundation/Foundation.h>
 #import "FMDatabase.h"
-#import "ISDBEntry.h"
+#import "ISDBEntryDescription.h"
 #import "ISDBViewReloader.h"
 
 @protocol ISDBDataSource <NSObject>

@@ -185,7 +185,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 
   // Removes and moves.
   for (NSInteger i = self.entries.count-1; i >= 0; i--) {
-    ISDBEntry *entry = [self.entries objectAtIndex:i];
+    ISDBEntryDescription *entry = [self.entries objectAtIndex:i];
     NSUInteger newIndex = [updatedEntries indexOfObject:entry];
     if (newIndex == NSNotFound) {
       // Remove.
@@ -208,7 +208,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
   
   // Additions and updates.
   for (NSUInteger i = 0; i < updatedEntries.count; i++) {
-    ISDBEntry *entry = [updatedEntries objectAtIndex:i];
+    ISDBEntryDescription *entry = [updatedEntries objectAtIndex:i];
     NSUInteger oldIndex = [self.entries indexOfObject:entry];
     if (oldIndex == NSNotFound) {
       // Add.
@@ -218,7 +218,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       [actions addObject:operation];
       countBefore++;
     } else {
-      ISDBEntry *oldEntry = [self.entries objectAtIndex:oldIndex];
+      ISDBEntryDescription *oldEntry = [self.entries objectAtIndex:oldIndex];
       if (![oldEntry isSummaryEqual:entry]) {
         [updates addObject:[NSNumber numberWithInteger:i]];
       }
@@ -309,7 +309,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
   dispatch_async(self.dispatchQueue, ^{
     [self updateEntries];
     if (index < self.entries.count) {
-      ISDBEntry *dbEntry = [self.entries objectAtIndex:index];
+      ISDBEntryDescription *dbEntry = [self.entries objectAtIndex:index];
       NSString *identifier = dbEntry.identifier;
       NSDictionary *entry = [self.dataSource database:self.database
                                    entryForIdentifier:identifier];

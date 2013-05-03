@@ -20,17 +20,52 @@
 // SOFTWARE.
 //
 
-#import <Foundation/Foundation.h>
+#import "ISDBEntryDescription.h"
 
-@interface ISDBEntry : NSObject
+@interface ISDBEntryDescription ()
 
-@property (strong, nonatomic, readonly) id identifier;
-@property (strong, nonatomic, readonly) id summary;
+@end
 
-+ (id)entryWithIdentifier:(id)identifier
-                  summary:(id)summary;
+
+@implementation ISDBEntryDescription
+
+
++ (id)descriptionWithIdentifier:(id)identifier
+                  summary:(id)summary
+{
+  return [[self alloc] initWithIdentifier:identifier
+                                  summary:summary];
+}
+
+
 - (id)initWithIdentifier:(id)identifier
-                 summary:(id)summary;
-- (BOOL)isSummaryEqual:(ISDBEntry *)object;
+                 summary:(id)summary
+{
+  self = [super init];
+  if (self) {
+    _identifier = identifier;
+    _summary = summary;
+  }
+  return self;
+}
+
+
+- (BOOL)isEqual:(id)object
+{
+  if (self == object) {
+    return YES;
+  } else if ([self class] == [object class]) {
+    ISDBEntryDescription *identifier = (ISDBEntryDescription *)object;
+    return [self.identifier isEqual:identifier.identifier];
+  }
+  return NO;
+}
+
+
+- (BOOL)isSummaryEqual:(ISDBEntryDescription *)object
+{
+  return [self.summary isEqual:object.summary];
+}
+
 
 @end

@@ -76,7 +76,7 @@
   FMResultSet *result = [database executeQuery:self.select];
   while ([result next]) {
     NSString *identifier = [result objectForColumnName:self.identifier];
-    [entries addObject:[ISDBEntry entryWithIdentifier:identifier
+    [entries addObject:[ISDBEntryDescription descriptionWithIdentifier:identifier
                                               summary:[result resultDict]]];
   }
   return entries;

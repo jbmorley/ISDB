@@ -62,7 +62,7 @@
     NSUInteger index = arc4random() % candidates.count;
     NSString *identifier = candidates[index];
     NSString *summary = ((arc4random() % 2) == 0) ? @"A" : @"B";
-    [self.entries addObject:[ISDBEntry entryWithIdentifier:identifier
+    [self.entries addObject:[ISDBEntryDescription descriptionWithIdentifier:identifier
                                                    summary:summary]];
     [candidates removeObjectAtIndex:index];
   }
@@ -74,10 +74,10 @@
 - (NSDictionary *)database:(FMDatabase *)database
         entryForIdentifier:(id)identifier
 {
-  ISDBEntry *keyEntry = [ISDBEntry entryWithIdentifier:identifier
+  ISDBEntryDescription *keyEntry = [ISDBEntryDescription descriptionWithIdentifier:identifier
                                                summary:nil];
   NSUInteger index = [self.entries indexOfObject:keyEntry];
-  ISDBEntry *entry = [self.entries objectAtIndex:index];
+  ISDBEntryDescription *entry = [self.entries objectAtIndex:index];
   NSString *details = [NSString stringWithFormat:@"%@: %@", entry.identifier, entry.summary];
   
   return @{@"show": details};
