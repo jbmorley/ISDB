@@ -37,6 +37,7 @@
 @property (nonatomic, readonly) NSUInteger currentVersion;
 @property (strong, nonatomic) ISWeakReferenceArray *views;
 @property (nonatomic) dispatch_queue_t dispatchQueue;
+@property (strong, nonatomic) FMDatabase *database;
 
 @end
 
@@ -295,6 +296,14 @@ static NSString *ColumnNameVersion = @"version";
     [self.database rollback];
     @throw exception;
   }
+}
+
+
+- (void)inDatabase:(void (^)(FMDatabase *db))block
+{
+  dispatch_async(self.dispatchQueue, ^{
+    block(self.database);
+  });
 }
 
 

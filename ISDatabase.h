@@ -38,12 +38,11 @@ typedef enum {
                         
 @interface ISDatabase : NSObject
 
-@property (strong, nonatomic) FMDatabase *database;
-
 - (id)initWithPath:(NSString *)path
           provider:(id<ISDBProvider>)provider;
 - (BOOL)open;
 - (void)close;
+- (void)inDatabase:(void (^)(FMDatabase *db))block;
 
 - (ISDBView *)viewWithDataSource:(id<ISDBDataSource>)dataSource;
 
