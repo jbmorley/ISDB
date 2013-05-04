@@ -12,5 +12,8 @@
 @interface ISDBView (Private)
 
 - (id)identifierForIndex:(NSUInteger)index;
+- (void)entryForIdentifier:(id)identifier
+                completion:(void (^)(NSDictionary *entry))completionBlock;
+
 
 @end

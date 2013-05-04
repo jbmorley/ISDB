@@ -289,17 +289,21 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
-- (void)entryForIdentifier:(id)identifier
-                completion:(void (^)(NSDictionary *entry))completionBlock
+- (ISDBEntry *)entryForIdentifier:(id)identifier
 {
-  dispatch_queue_t callingQueue = dispatch_get_current_queue();
-  dispatch_async(self.dispatchQueue, ^{
-    NSDictionary *entry = [self.dataSource database:self.database
-                                 entryForIdentifier:identifier];
-    dispatch_async(callingQueue, ^{
-      completionBlock(entry);
-    });
-  });
+  // TODO Introducing an additional synchronized block may introduce some
+  // performance issues.
+  @synchronized (self) {
+    // Create a description to allow us to find the entry.
+    ISDBEntryDescription *description
+    = [ISDBEntryDescription descriptionWithIdentifier:identifier
+                                              summary:nil];
+    NSUInteger index = [self.entries indexOfObject:description];
+    ISDBEntry *entry = [ISDBEntry entryWithView:self
+                                          index:index
+                                     identifier:identifier];
+    return entry;
+  }
 }
 
 

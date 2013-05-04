@@ -43,6 +43,9 @@ typedef enum {
 @interface ISDBView : NSObject {
   
   NSMutableArray *_entries;
+  dispatch_queue_t _dispatchQueue;
+  id<ISDBDataSource> _dataSource;
+  FMDatabase *_database;
   
 }
 
@@ -55,8 +58,7 @@ typedef enum {
 - (void)invalidate:(BOOL)reload;
 
 - (ISDBEntry *)entryForIndex:(NSInteger)index;
-- (void)entryForIdentifier:(id)identifier
-                completion:(void (^)(NSDictionary *entry))completionBlock;
+- (ISDBEntry *)entryForIdentifier:(id)identifier;
 
 // TODO Do these need to return anything?
 // It might be cleaner if they didn't, though it's possible we'd loose

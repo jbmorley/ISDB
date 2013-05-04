@@ -14,8 +14,12 @@
 
 + (id)entryWithView:(ISDBView *)view
               index:(NSUInteger)index;
++ (id)entryWithView:(ISDBView *)view
+              index:(NSUInteger)index
+        identifier:(id)identifier;
 - (id)initWithView:(ISDBView *)view
-             index:(NSUInteger)index;
+             index:(NSUInteger)index
+        identifier:(id)identifier;
 - (void)fetch:(void (^)(NSDictionary *dict))completionBlock;
 - (void)update:(NSDictionary *)entry
     completion:(void (^)(BOOL success))completionBlock;

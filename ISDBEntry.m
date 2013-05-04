@@ -24,18 +24,34 @@
               index:(NSUInteger)index
 {
   return [[self alloc] initWithView:view
-                              index:index];
+                              index:index
+                         identifier:nil];
+}
+
+
++ (id)entryWithView:(ISDBView *)view
+              index:(NSUInteger)index
+         identifier:(id)identifier
+{
+  return [[self alloc] initWithView:view
+                              index:index
+                         identifier:identifier];
 }
 
 
 - (id)initWithView:(ISDBView *)view
              index:(NSUInteger)index
+        identifier:(id)identifier
 {
   self = [super init];
   if (self) {
     self.view = view;
     self.index = index;
-    self.identifier = [self.view identifierForIndex:self.index];
+    if (identifier == nil) {
+      self.identifier = [self.view identifierForIndex:self.index];
+    } else {
+      self.identifier = identifier;
+    }
     [self.view addObserver:self];
   }
   return self;
