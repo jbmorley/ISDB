@@ -47,16 +47,25 @@
     self.identifier = identifier;
     self.description = description;
     self.orderBy = orderBy;
-    if (self.orderBy) {
-      self.select = [NSString stringWithFormat:
-                     @"SELECT * FROM %@ ORDER BY %@",
-                     self.table,
-                     self.orderBy];
+    
+    // Construct the select query.
+    NSMutableString *selectQuery = [NSMutableString stringWithCapacity:100];
+    [selectQuery appendString:@"SELECT "];
+    if (self.description) {
+      [selectQuery appendString:
+       [@[self.identifier, self.description] componentsJoinedByString:@", "]];
     } else {
-      self.select = [NSString stringWithFormat:
-                     @"SELECT * FROM %@",
-                     self.table];
+      [selectQuery appendString:@"*"];
     }
+    [selectQuery appendString:@" FROM "];
+    [selectQuery appendString:self.table];
+    if (self.orderBy) {
+      [selectQuery appendString:@" ORDER BY "];
+      [selectQuery appendString:self.orderBy];
+    }
+    self.select = selectQuery;
+    NSLog(@"SELECT: %@", self.select);
+    
     self.selectByIdentifier = [NSString stringWithFormat:
                                @"SELECT * FROM %@ WHERE %@ = ?",
                                self.table,
