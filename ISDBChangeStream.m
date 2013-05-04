@@ -78,14 +78,14 @@ typedef enum {
 #pragma mark - ISDBViewObserver
 
 
-- (void) viewBeginUpdates:(ISDBView *)view
+- (void) beginUpdates:(ISDBView *)view
 {
   assert(self.state == ISDBChangeStreamStateIdle);
   self.state = ISDBChangeStreamStateUpdating;
 }
 
 
-- (void)viewEndUpdates:(ISDBView *)view
+- (void)endUpdates:(ISDBView *)view
 {
   assert(self.state == ISDBChangeStreamStateUpdating);
   for (NSNumber *index in self.additions) {

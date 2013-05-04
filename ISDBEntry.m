@@ -70,10 +70,10 @@
 #pragma mark - ISDBViewObserver
 
 
-- (void) viewBeginUpdates:(ISDBView *)view {}
+- (void) beginUpdates:(ISDBView *)view {}
 
 
-- (void) viewEndUpdates:(ISDBView *)view {}
+- (void) endUpdates:(ISDBView *)view {}
 
 
 - (void) view:(ISDBView *)view

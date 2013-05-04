@@ -41,8 +41,8 @@ typedef enum {
 
 @protocol ISDBViewObserver <NSObject>
 
-- (void) viewBeginUpdates:(ISDBView *)view;
-- (void) viewEndUpdates:(ISDBView *)view;
+- (void) beginUpdates:(ISDBView *)view;
+- (void) endUpdates:(ISDBView *)view;
 - (void) view:(ISDBView *)view
  entryUpdated:(NSNumber *)index;
 - (void) view:(ISDBView *)view
