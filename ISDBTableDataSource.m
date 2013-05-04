@@ -79,6 +79,7 @@
     [entries addObject:[ISDBEntryDescription descriptionWithIdentifier:identifier
                                               summary:[result resultDict]]];
   }
+  [result close];
   return entries;
 }
 
@@ -88,10 +89,12 @@
 {
   FMResultSet *result = [database executeQuery:self.selectByIdentifier
                           withArgumentsInArray:@[identifier]];
+  NSDictionary *dict = nil;
   if ([result next]) {
-    return [result resultDict];
+    dict = [result resultDict];
   }
-  return nil;
+  [result close];
+  return dict;
 }
 
 
