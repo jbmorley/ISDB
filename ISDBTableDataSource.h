@@ -27,6 +27,7 @@
 
 - (id)initWithTable:(NSString *)table
          identifier:(NSString *)identifier
+        description:(NSString *)description
             orderBy:(NSString *)orderBy;
 
 @end

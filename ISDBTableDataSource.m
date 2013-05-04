@@ -26,6 +26,7 @@
 
 @property (strong, nonatomic) NSString *table;
 @property (strong, nonatomic) NSString *identifier;
+@property (strong, nonatomic) NSString *description;
 @property (strong, nonatomic) NSString *orderBy;
 @property (strong, nonatomic) NSString *select;
 @property (strong, nonatomic) NSString *selectByIdentifier;
@@ -37,12 +38,14 @@
 
 - (id)initWithTable:(NSString *)table
          identifier:(NSString *)identifier
+        description:(NSString *)description
             orderBy:(NSString *)orderBy
 {
   self = [super init];
   if (self) {
     self.table = table;
     self.identifier = identifier;
+    self.description = description;
     self.orderBy = orderBy;
     if (self.orderBy) {
       self.select = [NSString stringWithFormat:
@@ -71,13 +74,22 @@
                 limit:(NSInteger)limit
 {
   assert((offset == 0) && (limit == -1));
-  NSLog(@"WARNING: Unable to identify a summary row. Change comparisons may be slow.");
+  if (self.description == nil) {
+    NSLog(@"WARNING: Unable to identify a description row. Change comparisons may be slow.");
+  }
   NSMutableArray *entries = [NSMutableArray arrayWithCapacity:3];
   FMResultSet *result = [database executeQuery:self.select];
   while ([result next]) {
     NSString *identifier = [result objectForColumnName:self.identifier];
-    [entries addObject:[ISDBEntryDescription descriptionWithIdentifier:identifier
-                                              summary:[result resultDict]]];
+    id summary = nil;
+    if (self.description == nil) {
+      summary = [result resultDict];
+    } else {
+      summary = [result objectForColumnName:self.description];
+    }
+    [entries addObject:
+     [ISDBEntryDescription descriptionWithIdentifier:identifier
+                                              summary:summary]];
   }
   [result close];
   return entries;
