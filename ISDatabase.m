@@ -25,6 +25,7 @@
 #import "FMDatabaseAdditions.h"
 #import "ISWeakReferenceArray.h"
 #import "FMDatabase+Update.h"
+#import "FMDatabaseQueue.h"
 
 
 @interface ISDatabase ()
@@ -32,11 +33,8 @@
 @property (strong, nonatomic) NSString *path;
 @property (weak, nonatomic) id<ISDBProvider> provider;
 @property (nonatomic) ISDatabaseState state;
-@property (nonatomic, readonly) NSString *versionTable;
-@property (nonatomic, readonly) NSUInteger version;
-@property (nonatomic, readonly) NSUInteger currentVersion;
 @property (strong, nonatomic) ISWeakReferenceArray *views;
-@property (nonatomic) dispatch_queue_t dispatchQueue;
+@property (strong, nonatomic) FMDatabaseQueue *queue;
 
 @end
 
@@ -61,8 +59,6 @@ static NSString *ColumnNameVersion = @"version";
     self.state = ISDatabaseStateClosed;
     self.provider = provider;
     self.views = [ISWeakReferenceArray arrayWithCapacity:3];
-    self.dispatchQueue = dispatch_queue_create("uk.co.inseven.database",
-                                               NULL);
   }
   return self;
 }
@@ -71,22 +67,22 @@ static NSString *ColumnNameVersion = @"version";
 #pragma mark - Properties
 
 
-- (NSString *)versionTable
+- (NSString *)versionTable:(FMDatabase *)database
 {
   assert(self.state != ISDatabaseStateClosed);
   if ([self.provider respondsToSelector:@selector(versionTable)]) {
-    return [self.provider databaseVersionTable:self.database];
+    return [self.provider databaseVersionTable:database];
   } else {
     return @"version";
   }
 }
 
 
-- (NSUInteger)version
+- (NSUInteger)version:(FMDatabase *)database
 {
   assert(self.state != ISDatabaseStateClosed);
   if ([self.provider respondsToSelector:@selector(databaseVersion:)]) {
-    return [self.provider databaseVersion:self.database];
+    return [self.provider databaseVersion:database];
   } else {
     return 1;
   }
@@ -94,28 +90,29 @@ static NSString *ColumnNameVersion = @"version";
 
 
 - (void)setVersion:(NSUInteger)version
+          database:(FMDatabase *)database
 {
   assert(self.state != ISDatabaseStateClosed);
   NSString *query = [NSString stringWithFormat:
                      @"REPLACE INTO %@ (id, %@) VALUES (?, ?)",
-                     self.versionTable,
+                     [self versionTable:database],
                      ColumnNameVersion];
   BOOL success
-    = [self.database executeUpdate:query
-              withArgumentsInArray:@[@0,
-                                     [NSNumber numberWithInteger:version]]];
+    = [database executeUpdate:query
+         withArgumentsInArray:@[@0,
+                                [NSNumber numberWithInteger:version]]];
   if (!success) {
     @throw [NSException exceptionWithName:@"DatabaseVersionUpdateFailure"
-                                   reason:[self.database lastErrorMessage]
+                                   reason:[database lastErrorMessage]
                                  userInfo:nil];
   }
 }
 
-- (NSUInteger)currentVersion
+- (NSUInteger)currentVersion:(FMDatabase *)database
 {
   assert(self.state != ISDatabaseStateClosed);
   // Check to see if the version table exists.
-  if (![self.database tableExists:self.versionTable]) {
+  if (![database tableExists:[self versionTable:database]]) {
     // If no table exists, we create one and treat this from an upgrade
     // from version 0 to version 1 (grandfathering in existing databases).
     return 0;
@@ -123,9 +120,9 @@ static NSString *ColumnNameVersion = @"version";
     // If the table exists, we query it for the current version.
     NSString *query = [NSString stringWithFormat:
                        @"SELECT * FROM %@ WHERE id=?",
-                       self.versionTable];
-    FMResultSet *result = [self.database executeQuery:query
-                                 withArgumentsInArray:@[@0]];
+                       [self versionTable:database]];
+    FMResultSet *result = [database executeQuery:query
+                            withArgumentsInArray:@[@0]];
     assert([result next]);
     return [result intForColumn:ColumnNameVersion];
   }
@@ -136,25 +133,30 @@ static NSString *ColumnNameVersion = @"version";
 
 
 - (void)createTable:(NSString *)table
+           database:(FMDatabase *)database
 {
   assert(self.state != ISDatabaseStateClosed);
   NSString *sql = [NSString stringWithFormat:@"CREATE TABLE IF NOT EXISTS %@", table];
-  if (![self.database executeUpdate:sql]) {
+  if (![database executeUpdate:sql]) {
+    NSLog(@"Error '%@' encountered when executing '%@'",
+          [database lastErrorMessage],
+          sql);
     @throw [NSException exceptionWithName:@"DatabaseCreateFailure"
-                                   reason:[self.database lastErrorMessage]
+                                   reason:[database lastErrorMessage]
                                  userInfo:nil];
   }
 }
 
 
-- (void)createVersionTable
+- (void)createVersionTable:(FMDatabase *)database
 {
   assert(self.state != ISDatabaseStateClosed);
   NSString *table = [NSString stringWithFormat:
                      @"%@ (id integer primary key, %@ integer)",
-                     self.versionTable,
+                     [self versionTable:database],
                      ColumnNameVersion];
-  [self createTable:table];
+  [self createTable:table
+           database:database];
 }
 
 
@@ -163,73 +165,64 @@ static NSString *ColumnNameVersion = @"version";
   __block BOOL result;
   
   assert(self.state == ISDatabaseStateClosed);
-  dispatch_sync(self.dispatchQueue, ^{
-    
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    BOOL databaseExists = [fileManager fileExistsAtPath:self.path];
-    self.database = [FMDatabase databaseWithPath:self.path];
-    if ([self.database open]) {
-      self.state = ISDatabaseStateOpen;
-      @try {
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  BOOL databaseExists = [fileManager fileExistsAtPath:self.path];
+  self.queue = [FMDatabaseQueue databaseQueueWithPath:self.path];
+  self.state = ISDatabaseStateOpen;
+  [self.queue inDatabase:^(FMDatabase *db) {
+
+    @try {
+      
+      // If the database did not exist, then we can assume a successful
+      // open has created the database.
+      if (!databaseExists) {
         
-        // If the database did not exist, then we can assume a successful
-        // open has created the database.
-        if (!databaseExists) {
-          
-          [self createVersionTable];
-          [self create];
-          self.state = ISDatabaseStateReady;
-          
+        [self createVersionTable:db];
+        [self create:db];
+        self.state = ISDatabaseStateReady;
+        
+      } else {
+        
+        NSUInteger currentVersion = [self currentVersion:db];
+        NSUInteger version = [self version:db];
+        if (currentVersion < version) {
+          [self updateOldVersion:currentVersion
+                      newVersion:version
+                        database:db];
+        } else if (currentVersion > version) {
+          @throw [NSException exceptionWithName:@"DatabaseVersionTooRecent"
+                                         reason:@"The database version is higher than that supported by the provider."
+                                       userInfo:nil];
         } else {
-          
-          NSUInteger currentVersion = self.currentVersion;
-          NSUInteger version = self.version;
-          if (currentVersion < version) {
-            [self updateOldVersion:currentVersion
-                        newVersion:version];
-          } else if (currentVersion > version) {
-            @throw [NSException exceptionWithName:@"DatabaseVersionTooRecent"
-                                           reason:@"The database version is higher than that supported by the provider."
-                                         userInfo:nil];
-          } else {
-            NSLog(@"Successfully openend database '%@' with version %d",
-                  self.path, version);
-          }
-          self.state = ISDatabaseStateReady;
-          
+          NSLog(@"Successfully openend database '%@' with version %d",
+                self.path, version);
         }
-        
-        // Register for updates.
-        [self.database update:self
-                     selector:@selector(databaseDidUpdate)];
-        
-        result = YES; return;
-        
-        
-      }
-      @catch (NSException *exception) {
-        
-        // Clean up from a failed create or update.
-        [self.database close];
-        self.database = nil;
-        self.state = ISDatabaseStateClosed;
-        if (!databaseExists) {
-          [fileManager removeItemAtPath:self.path
-                                  error:nil];
-        }
-        result = NO; return;
+        self.state = ISDatabaseStateReady;
         
       }
       
+      // Register for updates.
+      [db update:self
+        selector:@selector(databaseDidUpdate)];
+      
+      result = YES; return;        
+      
+    } @catch (NSException *exception) {
+      
+      // Clean up from a failed create or update.
+      NSLog(@"Unable to open database!");
+      self.state = ISDatabaseStateClosed;
+      if (!databaseExists) {
+        [fileManager removeItemAtPath:self.path
+                                error:nil];
+      }
+      result = NO; return;
+      
     }
     
-    self.database = nil;
-    result = NO; return;
-
-  });
-  
-  return result;
-  
+  }];
+    
+  return result;  
 }
 
 
@@ -244,29 +237,28 @@ static NSString *ColumnNameVersion = @"version";
 - (void)close
 {
   assert(self.state != ISDatabaseStateClosed);
-  dispatch_sync(self.dispatchQueue, ^{
-    [self.database close];
-  });
+  [self.queue close];
   self.state = ISDatabaseStateClosed;
 }
 
 
-- (void)create
+- (void)create:(FMDatabase *)database
 {
   assert(self.state != ISDatabaseStateClosed);
   NSLog(@"Creating database '%@'.", self.path);
   @try {
-    [self.database beginTransaction];
-    if (![self.provider databaseCreate:self.database]) {
+    [database beginTransaction];
+    if (![self.provider databaseCreate:database]) {
       @throw [NSException exceptionWithName:@"DatabaseCreateFailure"
                                      reason:@"Provider create failed."
                                    userInfo:nil];
     }
-    [self setVersion:self.version];
-    [self.database commit];
+    [self setVersion:[self version:database]
+            database:database];
+    [database commit];
   }
   @catch (NSException *exception) {
-    [self.database rollback];
+    [database rollback];
     @throw exception;
   }
 }
@@ -274,25 +266,27 @@ static NSString *ColumnNameVersion = @"version";
 
 - (void)updateOldVersion:(NSUInteger)oldVersion
               newVersion:(NSUInteger)newVersion
+                database:(FMDatabase *)database;
 {
   assert(self.state != ISDatabaseStateClosed);
   NSLog(@"Updating database '%@' from version %d to version %d.",
         self.path, oldVersion, newVersion);
   @try {
-    [self.database beginTransaction];
-    if (![self.provider databaseUpdate:self.database
+    [database beginTransaction];
+    if (![self.provider databaseUpdate:database
                             oldVersion:oldVersion
                             newVersion:newVersion]) {
       @throw [NSException exceptionWithName:@"DatabaseUpdateFailure"
                                      reason:@"Provider update failed."
                                    userInfo:nil];
     }
-    [self createVersionTable];
-    [self setVersion:newVersion];
-    [self.database commit];
+    [self createVersionTable:database];
+    [self setVersion:newVersion
+            database:database];
+    [database commit];
   }
   @catch (NSException *exception) {
-    [self.database rollback];
+    [database rollback];
     @throw exception;
   }
 }
@@ -305,9 +299,8 @@ static NSString *ColumnNameVersion = @"version";
 {
   assert(self.state == ISDatabaseStateReady);
   ISDBView *view
-    = [[ISDBView alloc] initWithDispatchQueue:self.dispatchQueue
-                                     database:self.database
-                                   dataSource:dataSource];
+    = [[ISDBView alloc] initWithQueue:self.queue
+                           dataSource:dataSource];
   [self.views addObject:view];
   return view;
 }

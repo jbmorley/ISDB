@@ -22,10 +22,11 @@
 
 #import "ISDBView.h"
 #import "ISNotifier.h"
+#import "FMDatabaseQueue+Current.h"
 
 typedef enum {
   ISDBViewStateInvalid,
-  ISDBViewStateCount,
+  ISDBViewSateUpdating,
   ISDBViewStateValid
 } ISDBViewState;
 
@@ -67,13 +68,13 @@ typedef enum {
 @interface ISDBView ()
 
 @property (nonatomic) ISDBViewState state;
-@property (strong, nonatomic) FMDatabase *database;
 @property (strong, nonatomic) id<ISDBDataSource> dataSource;
 @property (strong, nonatomic) NSArray *entries;
 @property (strong, nonatomic) NSMutableDictionary *entriesByIdentifier;
 @property (strong, nonatomic) ISNotifier *notifier;
-@property (nonatomic) dispatch_queue_t dispatchQueue;
+@property (nonatomic) FMDatabaseQueue *queue;
 @property (nonatomic) dispatch_queue_t comparisonQueue;
+@property (nonatomic) BOOL batchUpdate;
 
 @end
 
@@ -84,17 +85,16 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 
 @implementation ISDBView
 
-- (id) initWithDispatchQueue:(dispatch_queue_t)dispatchQueue
-                    database:(FMDatabase *)database
-                  dataSource:(id<ISDBDataSource>)dataSource
+- (id) initWithQueue:(FMDatabaseQueue *)queue
+          dataSource:(id<ISDBDataSource>)dataSource
 {
   self = [super init];
   if (self) {
-    self.dispatchQueue = dispatchQueue;
-    self.database = database;
+    self.queue = queue;
     self.dataSource = dataSource;
     self.state = ISDBViewStateInvalid;
     self.notifier = [ISNotifier new];
+    self.batchUpdate = NO;
     
     if ([self.dataSource respondsToSelector:@selector(initialize:)]) {
       [self.dataSource initialize:[[ISDBViewReloader alloc] initWithView:self]];
@@ -106,9 +106,10 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     self.comparisonQueue
     = dispatch_queue_create([queueIdentifier UTF8String], NULL);
     
-    dispatch_sync(self.dispatchQueue, ^{
-      [self loadEntries];
-    });
+    [self.queue inDatabase:^(FMDatabase *db) {
+      [self loadEntries:db];
+    }];
+    
     
   }
   return self;
@@ -119,24 +120,19 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 {
   @synchronized (self) {
     self.state = ISDBViewStateInvalid;
-
-    // Only attempt to reload if we have no observers.
     if (self.notifier.count > 0) {
-      dispatch_async(self.dispatchQueue, ^{
-        [self updateEntries];
-      });
+      [self scheduleUpdate];
     }
   }
 }
 
 
-- (void)loadEntries
+- (void)loadEntries:(FMDatabase *)database;
 {
   @synchronized (self) {
-    assert(dispatch_get_current_queue() == self.dispatchQueue);
     assert(self.entries == nil);
     assert(self.state == ISDBViewStateInvalid);
-    self.entries = [self.dataSource database:self.database
+    self.entries = [self.dataSource database:database
                             entriesForOffset:0
                                        limit:-1];
     self.state = ISDBViewStateValid;
@@ -144,28 +140,55 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
-- (void)updateEntries
+- (void)scheduleUpdate
 {
-  assert(dispatch_get_current_queue() == self.dispatchQueue);
+  @synchronized (self) {
+    
+    // Don't attempt any udpates when we're in a batch update mode.
+    if (self.batchUpdate) {
+      return;
+    }
+    
+    if (self.state == ISDBViewStateInvalid) {
+      dispatch_async(self.comparisonQueue, ^{
+        [self.queue inDatabase:^(FMDatabase *db) {
+          [self updateEntries:db];
+        }];
+      });
+    }
+    
+  }
+}
+
+
+- (void)updateEntries:(FMDatabase *)database
+{
   assert(self.entries != nil);
+  // TODO Consider counting the no-ops.
   
   // Only run if we're not currently updating the entries.
   @synchronized (self) {
-    if (self.state == ISDBViewStateValid) {
-      return;
+    if (self.state == ISDBViewStateInvalid) {
+      self.state = ISDBViewSateUpdating;
     } else {
-      self.state = ISDBViewStateValid;
+      return;
     }
   }
   
+  NSLog(@"+ updatedEntries:");
+  
   // Fetch the updated entries.
-  NSArray *updatedEntries = [self.dataSource database:self.database
+  NSArray *updatedEntries = [self.dataSource database:database
                                      entriesForOffset:0
                                                 limit:-1];
   
   // Cross-post the comparison onto a separate serial dispatch queue.
   // This ensures all updates are ordered.
   dispatch_async(self.comparisonQueue, ^{
+    
+    @synchronized (self) {
+      self.state = ISDBViewStateValid;
+    }
 
     // Perform the comparison on a different thread to ensure we do
     // not block the UI thread.  Since we are always dispatching updates
@@ -225,6 +248,10 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     
     assert(countBefore == countAfter);
     
+    // This will catch any invalidations which occured while we were
+    // busy updating the database view.
+    [self scheduleUpdate];
+    
     // Notify our observers.
     dispatch_sync(dispatch_get_main_queue(), ^{
       @synchronized (self) {
@@ -270,7 +297,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     });
     
   });
-
+  NSLog(@"- updatedEntries:");
 }
 
 
@@ -280,9 +307,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     // We may return an out-of-date result for the count, but we fire an
     // asynchronous update which will ensure we return the latest version
     // as-and-when it is available.
-    dispatch_async(self.dispatchQueue, ^{
-      [self updateEntries];
-    });
+    [self scheduleUpdate];
     return self.entries.count;
   }
 }
@@ -291,113 +316,114 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 - (void)entryForIdentifier:(id)identifier
                 completion:(void (^)(NSDictionary *entry))completionBlock
 {
-  dispatch_queue_t callingQueue = dispatch_get_current_queue();
-  dispatch_async(self.dispatchQueue, ^{
-    NSDictionary *entry = [self.dataSource database:self.database
+//  dispatch_queue_t callingQueue = dispatch_get_current_queue();
+  [self.queue inDatabaseReentrant:^(FMDatabase *db) {
+    NSDictionary *entry = [self.dataSource database:db
                                  entryForIdentifier:identifier];
-    dispatch_async(callingQueue, ^{
+//    dispatch_async(callingQueue, ^{
       completionBlock(entry);
-    });
-  });
+//    });
+  }];
 }
 
 
 - (void)entryForIndex:(NSInteger)index
            completion:(void (^)(NSDictionary *entry))completionBlock
 {
-  dispatch_queue_t callingQueue = dispatch_get_current_queue();
-  dispatch_async(self.dispatchQueue, ^{
-    [self updateEntries];
+  [self scheduleUpdate];
+//  dispatch_queue_t callingQueue = dispatch_get_current_queue();
+  [self.queue inDatabaseReentrant:^(FMDatabase *db) {
     if (index < self.entries.count) {
       ISDBEntryDescription *dbEntry = [self.entries objectAtIndex:index];
       id identifier = dbEntry.identifier;
-      NSDictionary *entry = [self.dataSource database:self.database
+      NSDictionary *entry = [self.dataSource database:db
                                    entryForIdentifier:identifier];
-      dispatch_async(callingQueue, ^{
+//      dispatch_async(callingQueue, ^{
         completionBlock(entry);
-      });
+//      });
     } else {
-      dispatch_async(callingQueue, ^{
+//      dispatch_async(callingQueue, ^{
         completionBlock(nil);
-      });
+//      });
     }
-  });
+  }];
 }
 
 
 - (void)insert:(NSDictionary *)entry
     completion:(void (^)(id identifier))completionBlock
 {
-  dispatch_queue_t callingQueue = dispatch_get_current_queue();
-  dispatch_async(self.dispatchQueue, ^{
+//  dispatch_queue_t callingQueue = dispatch_get_current_queue();
+  [self.queue inDatabaseReentrant:^(FMDatabase *db) {
     if ([self.dataSource respondsToSelector:@selector(database:insert:)]) {
-      NSString *identifier = [self.dataSource database:self.database
+      NSString *identifier = [self.dataSource database:db
                                                 insert:entry];
       if (identifier) {
         [self invalidate:NO];
       }
       if (completionBlock != NULL) {
-        dispatch_async(callingQueue, ^{
+//        dispatch_async(callingQueue, ^{
           completionBlock(identifier);
-        });
+//        });
       }
     } else {
       @throw [NSException exceptionWithName:@"DataSourceInsertUnsupported"
                                      reason:@"The data source does not implement the database:insert: selector."
                                    userInfo:nil];
     }
-  });
+  }];
 }
 
 
 - (void) update:(NSDictionary *)entry
      completion:(void (^)(id identifier))completionBlock
 {
-  dispatch_queue_t callingQueue = dispatch_get_current_queue();
-  dispatch_async(self.dispatchQueue, ^{
+//  dispatch_queue_t callingQueue = dispatch_get_current_queue();
+  [self.queue inDatabaseReentrant:^(FMDatabase *db) {
+    NSLog(@"Database Update");
     if ([self.dataSource respondsToSelector:@selector(database:update:)]) {
-      NSString *identifier = [self.dataSource database:self.database
+      NSString *identifier = [self.dataSource database:db
                                                 update:entry];
       if (identifier) {
         [self invalidate:NO];
       }
       if (completionBlock != NULL) {
-        dispatch_async(callingQueue, ^{
+//        dispatch_async(callingQueue, ^{
           completionBlock(identifier);
-        });
+//        });
       }
     } else {
       @throw [NSException exceptionWithName:@"DataSourceUpdateUnsupported"
                                      reason:@"The data source does not implement the database:update: selector."
                                    userInfo:nil];
     }
-  });
+  }];
 }
 
 
 - (void)delete:(NSDictionary *)entry
     completion:(void (^)(id identifier))completionBlock
 {
-  dispatch_queue_t callingQueue = dispatch_get_current_queue();
-  dispatch_async(self.dispatchQueue, ^{
-    if ([self.database respondsToSelector:@selector(database:delete:)]) {
-      [self updateEntries];
-      NSString *identifier = [self.dataSource database:self.database
+  [self scheduleUpdate];
+//  dispatch_queue_t callingQueue = dispatch_get_current_queue();
+  [self.queue inDatabase:^(FMDatabase *db) {
+    if ([self.dataSource respondsToSelector:@selector(database:delete:)]) {
+      NSString *identifier = [self.dataSource database:db
                                                 delete:entry];
       if (identifier) {
         [self invalidate:NO];
       }
       if (completionBlock != NULL) {
-        dispatch_sync(callingQueue, ^{
+//        dispatch_sync(callingQueue, ^{
           completionBlock(identifier);
-        });
+//        });
       }
     } else {
       @throw [NSException exceptionWithName:@"DataSourceDeleteUnsupported"
                                      reason:@"The data source does not implement the database:delete: selector."
                                    userInfo:nil];
     }
-  });
+  }];
 }
 
 
@@ -416,6 +442,24 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 {
   @synchronized (self) {
     [self.notifier removeObserver:observer];
+  }
+}
+
+
+- (void)beginUpdate
+{
+  @synchronized (self) {
+    NSLog(@"BEGIN BATCH UPDATE");
+    self.batchUpdate = YES;
+  }
+}
+
+- (void)endUpdate
+{
+  @synchronized (self) {
+    NSLog(@"END BATCH UPDATE");
+    self.batchUpdate = NO;
+    [self scheduleUpdate];
   }
 }
 

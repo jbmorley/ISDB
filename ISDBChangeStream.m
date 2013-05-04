@@ -127,6 +127,7 @@ typedef enum {
 - (void)view:(ISDBView *)view
 entryUpdated:(NSNumber *)index
 {
+  NSLog(@"entry updated...");
   [self.updates addObject:index];
 }
 
@@ -140,6 +141,7 @@ entryUpdated:(NSNumber *)index
 - (void)view:(ISDBView *)view
 entryInserted:(NSNumber *)index
 {
+  NSLog(@"entry inserted...");
   [self.additions addObject:index];
 }
 

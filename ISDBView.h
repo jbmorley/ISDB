@@ -21,8 +21,8 @@
 // 
 
 #import <Foundation/Foundation.h>
-#import "FMDatabase.h"
 #import "ISDBDataSource.h"
+#import "FMDatabaseQueue.h"
 
 typedef void(^ISDBTask)();
 
@@ -62,9 +62,8 @@ entryInserted:(NSNumber *)index;
 
 @property (nonatomic, readonly) NSUInteger count;
 
-- (id) initWithDispatchQueue:(dispatch_queue_t)queue
-                    database:(FMDatabase *)database
-                  dataSource:(id<ISDBDataSource>)dataSource;
+- (id) initWithQueue:(FMDatabaseQueue *)queue
+          dataSource:(id<ISDBDataSource>)dataSource;
 
 - (void)invalidate:(BOOL)reload;
 
@@ -84,5 +83,8 @@ entryInserted:(NSNumber *)index;
 
 - (void) addObserver:(id<ISDBViewObserver>)observer;
 - (void) removeObserver:(id<ISDBViewObserver>)observer;
+
+- (void)beginUpdate;
+- (void)endUpdate;
 
 @end
