@@ -23,13 +23,6 @@
 #import "ISDBView.h"
 #import "ISNotifier.h"
 
-
-#define BEGIN_TIME \
-  NSDate *start = [NSDate date];
-#define END_TIME(a) \
-  NSTimeInterval seconds = [start timeIntervalSinceNow] * -1; \
-  NSLog(@"%@ (%02f)", a, seconds);
-
 typedef enum {
   ISDBViewStateInvalid,
   ISDBViewStateCount,
@@ -80,6 +73,7 @@ typedef enum {
 @property (strong, nonatomic) NSMutableDictionary *entriesByIdentifier;
 @property (strong, nonatomic) ISNotifier *notifier;
 @property (nonatomic) dispatch_queue_t dispatchQueue;
+@property (nonatomic) dispatch_queue_t comparisonQueue;
 
 @end
 
@@ -105,6 +99,12 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     if ([self.dataSource respondsToSelector:@selector(initialize:)]) {
       [self.dataSource initialize:[[ISDBViewReloader alloc] initWithView:self]];
     }
+    
+    NSString *queueIdentifier = [NSString stringWithFormat:@"%@%p",
+                                 @"uk.co.inseven.view.",
+                                 self];
+    self.comparisonQueue
+    = dispatch_queue_create([queueIdentifier UTF8String], NULL);
     
     dispatch_sync(self.dispatchQueue, ^{
       [self loadEntries];
@@ -163,64 +163,68 @@ static NSString *const kSQLiteTypeInteger = @"integer";
                                      entriesForOffset:0
                                                 limit:-1];
   
-  // Perform the comparison on a different thread to ensure we do
-  // not block the UI thread.  Since we are always dispatching updates
-  // onto a common queue we can guarantee that updates are performed in
-  // order (though they may be delayed).
-  // Updates are cross-posted back to the main thread.
-  // We are using an ordered dispatch queue here, so it is guaranteed
-  // that the current entries will not be being edited a this point.
-  // As we are only performing a read, we can safely do so without
-  // entering a synchronized block.
-  NSMutableArray *actions = [NSMutableArray arrayWithCapacity:3];
-  NSMutableArray *updates = [NSMutableArray arrayWithCapacity:3];
-  NSInteger countBefore = self.entries.count;
-  NSInteger countAfter = updatedEntries.count;
+  // Cross-post the comparison onto a separate serial dispatch queue.
+  // This ensures all updates are ordered.
+  dispatch_async(self.comparisonQueue, ^{
 
-  // Removes and moves.
-  for (NSInteger i = self.entries.count-1; i >= 0; i--) {
-    ISDBEntryDescription *entry = [self.entries objectAtIndex:i];
-    NSUInteger newIndex = [updatedEntries indexOfObject:entry];
-    if (newIndex == NSNotFound) {
-      // Remove.
-      ISDBViewOperation *operation
-      = [ISDBViewOperation operationWithType:ISDBOperationDelete
-                                     payload:[NSNumber numberWithInteger:i]];
-      [actions addObject:operation];
-      countBefore--;
-    } else {
-      if (i != newIndex) {
-        // Move.
+    // Perform the comparison on a different thread to ensure we do
+    // not block the UI thread.  Since we are always dispatching updates
+    // onto a common queue we can guarantee that updates are performed in
+    // order (though they may be delayed).
+    // Updates are cross-posted back to the main thread.
+    // We are using an ordered dispatch queue here, so it is guaranteed
+    // that the current entries will not be being edited a this point.
+    // As we are only performing a read, we can safely do so without
+    // entering a synchronized block.
+    NSMutableArray *actions = [NSMutableArray arrayWithCapacity:3];
+    NSMutableArray *updates = [NSMutableArray arrayWithCapacity:3];
+    NSInteger countBefore = self.entries.count;
+    NSInteger countAfter = updatedEntries.count;
+    
+    // Removes and moves.
+    for (NSInteger i = self.entries.count-1; i >= 0; i--) {
+      ISDBEntryDescription *entry = [self.entries objectAtIndex:i];
+      NSUInteger newIndex = [updatedEntries indexOfObject:entry];
+      if (newIndex == NSNotFound) {
+        // Remove.
         ISDBViewOperation *operation
-        = [ISDBViewOperation operationWithType:ISDBOperationMove
-                                       payload:@[[NSNumber numberWithInteger:i],
-           [NSNumber numberWithInteger:newIndex]]];
+        = [ISDBViewOperation operationWithType:ISDBOperationDelete
+                                       payload:[NSNumber numberWithInteger:i]];
         [actions addObject:operation];
+        countBefore--;
+      } else {
+        if (i != newIndex) {
+          // Move.
+          ISDBViewOperation *operation
+          = [ISDBViewOperation operationWithType:ISDBOperationMove
+                                         payload:@[[NSNumber numberWithInteger:i],
+             [NSNumber numberWithInteger:newIndex]]];
+          [actions addObject:operation];
+        }
       }
     }
-  }
-  
-  // Additions and updates.
-  for (NSUInteger i = 0; i < updatedEntries.count; i++) {
-    ISDBEntryDescription *entry = [updatedEntries objectAtIndex:i];
-    NSUInteger oldIndex = [self.entries indexOfObject:entry];
-    if (oldIndex == NSNotFound) {
-      // Add.
-      ISDBViewOperation *operation
-      = [ISDBViewOperation operationWithType:ISDBOperationInsert
-                                     payload:[NSNumber numberWithInteger:i]];
-      [actions addObject:operation];
-      countBefore++;
-    } else {
-      ISDBEntryDescription *oldEntry = [self.entries objectAtIndex:oldIndex];
-      if (![oldEntry isSummaryEqual:entry]) {
-        [updates addObject:[NSNumber numberWithInteger:i]];
+    
+    // Additions and updates.
+    for (NSUInteger i = 0; i < updatedEntries.count; i++) {
+      ISDBEntryDescription *entry = [updatedEntries objectAtIndex:i];
+      NSUInteger oldIndex = [self.entries indexOfObject:entry];
+      if (oldIndex == NSNotFound) {
+        // Add.
+        ISDBViewOperation *operation
+        = [ISDBViewOperation operationWithType:ISDBOperationInsert
+                                       payload:[NSNumber numberWithInteger:i]];
+        [actions addObject:operation];
+        countBefore++;
+      } else {
+        ISDBEntryDescription *oldEntry = [self.entries objectAtIndex:oldIndex];
+        if (![oldEntry isSummaryEqual:entry]) {
+          [updates addObject:[NSNumber numberWithInteger:i]];
+        }
       }
     }
-  }
-
-  assert(countBefore == countAfter);
-  
+    
+    assert(countBefore == countAfter);
+    
     // Notify our observers.
     dispatch_sync(dispatch_get_main_queue(), ^{
       @synchronized (self) {
@@ -242,12 +246,12 @@ static NSString *const kSQLiteTypeInteger = @"integer";
                        withObject:self
                        withObject:operation.payload];
           }
-
+          
         }
         self.entries = updatedEntries;
         [self.notifier notify:@selector(viewEndUpdates:)
                    withObject:self];
-
+        
         // We perform updates in a separate beginUpdates block to avoid
         // performing multiple operations when used as a data source for
         // UITableView.
@@ -260,10 +264,12 @@ static NSString *const kSQLiteTypeInteger = @"integer";
         }
         [self.notifier notify:@selector(viewEndUpdates:)
                    withObject:self];
-
+        
         
       }
     });
+    
+  });
 
 }
 
