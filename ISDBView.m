@@ -229,7 +229,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     dispatch_sync(dispatch_get_main_queue(), ^{
       @synchronized (self) {
         
-        [self.notifier notify:@selector(viewBeginUpdates:)
+        [self.notifier notify:@selector(beginUpdates:)
                    withObject:self];
         
         for (ISDBViewOperation *operation in actions) {
@@ -249,7 +249,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
           
         }
         self.entries = updatedEntries;
-        [self.notifier notify:@selector(viewEndUpdates:)
+        [self.notifier notify:@selector(endUpdates:)
                    withObject:self];
         
         // We perform updates in a separate beginUpdates block to avoid
