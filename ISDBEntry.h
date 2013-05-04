@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "ISDBView.h"
+#import "ISDBViewObserver.h"
 
 @interface ISDBEntry : NSObject <ISDBViewObserver>
 

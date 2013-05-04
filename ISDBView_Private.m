@@ -12,8 +12,10 @@
 
 - (id)identifierForIndex:(NSUInteger)index
 {
-  ISDBEntryDescription *description = [_entries objectAtIndex:index];
-  return description.identifier;
+  @synchronized (self) {
+    ISDBEntryDescription *description = [_entries objectAtIndex:index];
+    return description.identifier;
+  }
 }
 
 @end

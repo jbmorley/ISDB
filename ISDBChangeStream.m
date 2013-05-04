@@ -58,19 +58,18 @@ typedef enum {
   // though I'm not sure I prefer an explicit API either?
   _delegate = delegate;
   for (NSUInteger i=0; i<self.view.count; i++) {
-    [self.view entryForIndex:i
-                  completion:^(NSDictionary *entry) {
-                    dispatch_async(self.dispatchQueue, ^{
-                      ISDBEntry *entry = [ISDBEntry entryWithView:self.view
-                                                            index:i];
-                      dispatch_async(self.dispatchQueue, ^{
-                        [self.delegate changeStream:self
-                                              entry:entry
-                                          didChange:ISDBOperationUpdate];
-                      });
-
-                    });
-                  }];
+    [[self.view entryForIndex:i] fetch:^(NSDictionary *dict) {
+      dispatch_async(self.dispatchQueue, ^{
+        ISDBEntry *entry = [ISDBEntry entryWithView:self.view
+                                              index:i];
+        dispatch_async(self.dispatchQueue, ^{
+          [self.delegate changeStream:self
+                                entry:entry
+                            didChange:ISDBOperationUpdate];
+        });
+        
+      });
+    }];
   }
 }
 

@@ -22,6 +22,7 @@
 
 #import "ISDBView.h"
 #import "ISNotifier.h"
+#import "ISDBEntry.h"
 
 typedef enum {
   ISDBViewStateInvalid,
@@ -302,26 +303,11 @@ static NSString *const kSQLiteTypeInteger = @"integer";
 }
 
 
-- (void)entryForIndex:(NSInteger)index
-           completion:(void (^)(NSDictionary *entry))completionBlock
+- (ISDBEntry *)entryForIndex:(NSInteger)index
 {
-  dispatch_queue_t callingQueue = dispatch_get_current_queue();
-  dispatch_async(self.dispatchQueue, ^{
-    [self updateEntries];
-    if (index < self.entries.count) {
-      ISDBEntryDescription *dbEntry = [self.entries objectAtIndex:index];
-      id identifier = dbEntry.identifier;
-      NSDictionary *entry = [self.dataSource database:self.database
-                                   entryForIdentifier:identifier];
-      dispatch_async(callingQueue, ^{
-        completionBlock(entry);
-      });
-    } else {
-      dispatch_async(callingQueue, ^{
-        completionBlock(nil);
-      });
-    }
-  });
+  ISDBEntry *entry = [ISDBEntry entryWithView:self
+                                        index:index];
+  return entry;
 }
 
 

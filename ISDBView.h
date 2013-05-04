@@ -23,6 +23,9 @@
 #import <Foundation/Foundation.h>
 #import "FMDatabase.h"
 #import "ISDBDataSource.h"
+#import "ISDBViewObserver.h"
+
+@class ISDBEntry;
 
 typedef void(^ISDBTask)();
 
@@ -36,23 +39,6 @@ typedef enum {
   ISDBOperationMove
 } ISDBOperation;
 
-
-@class ISDBView;
-
-@protocol ISDBViewObserver <NSObject>
-
-- (void) beginUpdates:(ISDBView *)view;
-- (void) endUpdates:(ISDBView *)view;
-- (void) view:(ISDBView *)view
- entryUpdated:(NSNumber *)index;
-- (void) view:(ISDBView *)view
-   entryMoved:(NSArray *)indexes;
-- (void) view:(ISDBView *)view
-entryInserted:(NSNumber *)index;
-- (void) view:(ISDBView *)view
- entryDeleted:(NSNumber *)index;
-
-@end
 
 @interface ISDBView : NSObject {
   
@@ -68,13 +54,14 @@ entryInserted:(NSNumber *)index;
 
 - (void)invalidate:(BOOL)reload;
 
-- (void)entryForIndex:(NSInteger)index
-           completion:(void (^)(NSDictionary *entry))completionBlock;
-// TODO Should we expose this?
+- (ISDBEntry *)entryForIndex:(NSInteger)index;
 - (void)entryForIdentifier:(id)identifier
                 completion:(void (^)(NSDictionary *entry))completionBlock;
 
 // TODO Do these need to return anything?
+// It might be cleaner if they didn't, though it's possible we'd loose
+// the details of the entry as it's not necessarily bound to a view at this
+// point in time.
 - (void)insert:(NSDictionary *)entry
     completion:(void (^)(id identifier))completionBlock;
 - (void)update:(NSDictionary *)entry
