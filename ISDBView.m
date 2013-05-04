@@ -36,35 +36,29 @@ typedef enum {
   ISDBViewStateValid
 } ISDBViewState;
 
-typedef enum {
-  ISDBViewOperationTypeInsert,
-  ISDBViewOperationTypeDelete,
-  ISDBViewOperaitonTypeUpdate,
-  ISDBViewOperationTypeMove
-} ISDBViewOperationType;
 
 @interface ISDBViewOperation : NSObject
 
-@property (nonatomic) ISDBViewOperationType type;
+@property (nonatomic) ISDBOperation type;
 @property (strong, nonatomic) id payload;
 
-+ (id)operationWithType:(ISDBViewOperationType)type
++ (id)operationWithType:(ISDBOperation)type
                 payload:(id)payload;
-- (id)initWithType:(ISDBViewOperationType)type
+- (id)initWithType:(ISDBOperation)type
            payload:(id)payload;
 
 @end
 
 @implementation ISDBViewOperation
 
-+ (id)operationWithType:(ISDBViewOperationType)type
++ (id)operationWithType:(ISDBOperation)type
                 payload:(id)payload
 {
   return [[self alloc] initWithType:type
                             payload:payload];
 }
 
-- (id)initWithType:(ISDBViewOperationType)type
+- (id)initWithType:(ISDBOperation)type
            payload:(id)payload
 {
   self = [super init];
@@ -190,7 +184,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     if (newIndex == NSNotFound) {
       // Remove.
       ISDBViewOperation *operation
-      = [ISDBViewOperation operationWithType:ISDBViewOperationTypeDelete
+      = [ISDBViewOperation operationWithType:ISDBOperationDelete
                                      payload:[NSNumber numberWithInteger:i]];
       [actions addObject:operation];
       countBefore--;
@@ -198,7 +192,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
       if (i != newIndex) {
         // Move.
         ISDBViewOperation *operation
-        = [ISDBViewOperation operationWithType:ISDBViewOperationTypeMove
+        = [ISDBViewOperation operationWithType:ISDBOperationMove
                                        payload:@[[NSNumber numberWithInteger:i],
            [NSNumber numberWithInteger:newIndex]]];
         [actions addObject:operation];
@@ -213,7 +207,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     if (oldIndex == NSNotFound) {
       // Add.
       ISDBViewOperation *operation
-      = [ISDBViewOperation operationWithType:ISDBViewOperationTypeInsert
+      = [ISDBViewOperation operationWithType:ISDBOperationInsert
                                      payload:[NSNumber numberWithInteger:i]];
       [actions addObject:operation];
       countBefore++;
@@ -235,15 +229,15 @@ static NSString *const kSQLiteTypeInteger = @"integer";
                    withObject:self];
         
         for (ISDBViewOperation *operation in actions) {
-          if (operation.type == ISDBViewOperationTypeDelete) {
+          if (operation.type == ISDBOperationDelete) {
             [self.notifier notify:@selector(view:entryDeleted:)
                        withObject:self
                        withObject:operation.payload];
-          } else if (operation.type == ISDBViewOperationTypeMove) {
+          } else if (operation.type == ISDBOperationMove) {
             [self.notifier notify:@selector(view:entryMoved:)
                        withObject:self
                        withObject:operation.payload];
-          } else if (operation.type == ISDBViewOperationTypeInsert) {
+          } else if (operation.type == ISDBOperationInsert) {
             [self.notifier notify:@selector(view:entryInserted:)
                        withObject:self
                        withObject:operation.payload];
@@ -310,7 +304,7 @@ static NSString *const kSQLiteTypeInteger = @"integer";
     [self updateEntries];
     if (index < self.entries.count) {
       ISDBEntryDescription *dbEntry = [self.entries objectAtIndex:index];
-      NSString *identifier = dbEntry.identifier;
+      id identifier = dbEntry.identifier;
       NSDictionary *entry = [self.dataSource database:self.database
                                    entryForIdentifier:identifier];
       dispatch_async(callingQueue, ^{

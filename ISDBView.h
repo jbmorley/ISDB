@@ -28,6 +28,15 @@ typedef void(^ISDBTask)();
 
 extern NSInteger ISDBViewIndexUndefined;
 
+
+typedef enum {
+  ISDBOperationInsert,
+  ISDBOperationDelete,
+  ISDBOperationUpdate,
+  ISDBOperationMove
+} ISDBOperation;
+
+
 @class ISDBView;
 
 @protocol ISDBViewObserver <NSObject>
@@ -45,7 +54,11 @@ entryInserted:(NSNumber *)index;
 
 @end
 
-@interface ISDBView : NSObject
+@interface ISDBView : NSObject {
+  
+  NSMutableArray *_entries;
+  
+}
 
 @property (nonatomic, readonly) NSUInteger count;
 
@@ -57,15 +70,17 @@ entryInserted:(NSNumber *)index;
 
 - (void)entryForIndex:(NSInteger)index
            completion:(void (^)(NSDictionary *entry))completionBlock;
+// TODO Should we expose this?
 - (void)entryForIdentifier:(id)identifier
                 completion:(void (^)(NSDictionary *entry))completionBlock;
 
-- (void) insert:(NSDictionary *)entry
-     completion:(void (^)(id identifier))completionBlock;
-- (void) update:(NSDictionary *)entry
-     completion:(void (^)(id identifier))completionBlock;
-- (void) delete:(NSDictionary *)entry
-     completion:(void (^)(id identifier))completionBlock;
+// TODO Do these need to return anything?
+- (void)insert:(NSDictionary *)entry
+    completion:(void (^)(id identifier))completionBlock;
+- (void)update:(NSDictionary *)entry
+    completion:(void (^)(id identifier))completionBlock;
+- (void)delete:(NSDictionary *)entry
+    completion:(void (^)(id identifier))completionBlock;
 
 - (void) addObserver:(id<ISDBViewObserver>)observer;
 - (void) removeObserver:(id<ISDBViewObserver>)observer;

@@ -8,8 +8,21 @@
 
 #import <Foundation/Foundation.h>
 #import "ISDBView.h"
+#import "ISDBEntry.h"
+
+@class ISDBChangeStream;
+
+@protocol ISDBChangeStreamDelegate <NSObject>
+
+- (void)changeStream:(id)changeStream
+               entry:(ISDBEntry *)entry
+           didChange:(ISDBOperation)operation;
+
+@end
 
 @interface ISDBChangeStream : NSObject <ISDBViewObserver>
+
+@property (weak, nonatomic) id<ISDBChangeStreamDelegate> delegate;
 
 - (id)initWithView:(ISDBView *)view;
 

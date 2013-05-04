@@ -21,10 +21,14 @@ typedef enum {
 @property (strong, nonatomic) ISDBView *view;
 @property (strong, nonatomic) NSMutableArray *additions;
 @property (strong, nonatomic) NSMutableArray *updates;
+@property (strong, nonatomic) NSMutableArray *deletions;
+// TODO Consider using an NSOperationQueue here so it can be cancelled?
+@property (nonatomic) dispatch_queue_t dispatchQueue;
 
 @end
 
 // TODO This is not currently thread safe.
+// But probably doesn't need to be.
 
 
 @implementation ISDBChangeStream
@@ -38,8 +42,36 @@ typedef enum {
     [self.view addObserver:self];
     self.additions = [NSMutableArray arrayWithCapacity:3];
     self.updates = [NSMutableArray arrayWithCapacity:3];
+    self.dispatchQueue
+    = dispatch_queue_create("uk.co.inseven.database.changestream",
+                            NULL);
+    // TODO Clean up the dispatch queue.
   }
   return self;
+}
+
+
+- (void)setDelegate:(id<ISDBChangeStreamDelegate>)delegate
+{
+  // TODO We are using the setting of the delegate to trigger the initial
+  // read of the database. This would seem to be a strange side-effect,
+  // though I'm not sure I prefer an explicit API either?
+  _delegate = delegate;
+  for (NSUInteger i=0; i<self.view.count; i++) {
+    [self.view entryForIndex:i
+                  completion:^(NSDictionary *entry) {
+                    dispatch_async(self.dispatchQueue, ^{
+                      ISDBEntry *entry = [ISDBEntry entryWithView:self.view
+                                                            index:i];
+                      dispatch_async(self.dispatchQueue, ^{
+                        [self.delegate changeStream:self
+                                              entry:entry
+                                          didChange:ISDBOperationUpdate];
+                      });
+
+                    });
+                  }];
+  }
 }
 
 
@@ -57,14 +89,37 @@ typedef enum {
 {
   assert(self.state == ISDBChangeStreamStateUpdating);
   for (NSNumber *index in self.additions) {
-    NSLog(@"ADD: %d", [index integerValue]);
+    // Insertion.
+    ISDBEntry *entry = [ISDBEntry entryWithView:self.view
+                                          index:[index integerValue]];
+    dispatch_async(self.dispatchQueue, ^{
+      [self.delegate changeStream:self
+                            entry:entry
+                        didChange:ISDBOperationInsert];
+    });
   }
   for (NSNumber *index in self.updates) {
-    NSLog(@"UPDATE: %d", [index integerValue]);
+    // Update.
+    ISDBEntry *entry = [ISDBEntry entryWithView:self.view
+                                          index:[index integerValue]];
+    dispatch_async(self.dispatchQueue, ^{
+      [self.delegate changeStream:self
+                            entry:entry
+                        didChange:ISDBOperationUpdate];
+    });
+  }
+  for (ISDBEntry *entry in self.deletions) {
+    // Deletion.
+    dispatch_async(self.dispatchQueue, ^{
+      [self.delegate changeStream:self
+                            entry:entry
+                        didChange:ISDBOperationUpdate];
+    });
   }
   
   [self.additions removeAllObjects];
   [self.updates removeAllObjects];
+  [self.deletions removeAllObjects];
   self.state = ISDBChangeStreamStateIdle;
 }
 
@@ -92,8 +147,8 @@ entryInserted:(NSNumber *)index
 - (void)view:(ISDBView *)view
 entryDeleted:(NSNumber *)index
 {
-  // TODO We need to look up removals as we go.
-  // [self.deletions addObject:index];
+  [self.deletions addObject:[ISDBEntry entryWithView:self.view
+                                               index:[index integerValue]]];
 }
 
 
