@@ -12,15 +12,15 @@
 
 @protocol ISDBViewObserver <NSObject>
 
-- (void) beginUpdates:(ISDBView *)view;
-- (void) endUpdates:(ISDBView *)view;
-- (void) view:(ISDBView *)view
- entryUpdated:(NSNumber *)index;
-- (void) view:(ISDBView *)view
+- (void)beginUpdates:(ISDBView *)view;
+- (void)endUpdates:(ISDBView *)view;
+- (void)view:(ISDBView *)view
+entryUpdated:(NSNumber *)index;
+- (void)view:(ISDBView *)view
    entryMoved:(NSArray *)indexes;
-- (void) view:(ISDBView *)view
+- (void)view:(ISDBView *)view
 entryInserted:(NSNumber *)index;
-- (void) view:(ISDBView *)view
+- (void)view:(ISDBView *)view
  entryDeleted:(NSNumber *)index;
 
 @end
