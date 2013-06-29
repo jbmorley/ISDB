@@ -67,7 +67,7 @@
     NSLog(@"SELECT: %@", self.select);
     
     self.selectByIdentifier = [NSString stringWithFormat:
-                               @"SELECT * FROM %@ WHERE %@ = ?",
+                               @"SELECT * FROM %@ WHERE %@ = ? LIMIT 1",
                                self.table,
                                self.identifier];
   }
